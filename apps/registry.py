@@ -32,6 +32,7 @@ class AppRegistry:
 		for module in REGISTERED_APPS:
 			config = self._get_app_config(module)
 			self.registered_apps[config.app_name] = config
+		sys.path.remove(str(BASE_DIR))
 		return self.registered_apps
 
 apps = AppRegistry()

@@ -46,5 +46,3 @@ class SQLiteExecutor(BaseExecutor):
 			if script:
 				self.rollback()
 			raise err
-		finally:
-			self.close()

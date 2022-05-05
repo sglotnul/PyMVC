@@ -1,27 +1,14 @@
 from typing import Tuple
+from mymvc2.apps.app import App
 from mymvc2.orm.migrations.migration import Migration
-from mymvc2.orm.model.models import Model
 from mymvc2.orm.migrations.operations.base import CreateTableOperation, DeleteTableOperation, AlterTableOperation, CreateFieldSubOperation, DeleteFieldSubOperation, ChangeFieldSubOperation
 
-class State:
-	def __init__(self):
-		self._state = {}
-
-	def build(self, models: Tuple[Model]):
-		for model in models:
-			meta = model.__meta__
-			self._state[meta['name']] = {
-				'fields': dict(map(lambda f: (f.name, f.deconstruct()), meta['all_fields'])),
-			}
-
-	def mutate(self, migration_inner: dict):
-		Migration.apply_to_state(self._state, migration_inner)
-
-	@property
-	def state(self) -> dict:
-		return self._state
 
 class StateComparer:
+	def __init__(self, disposer: object): 
+		self.state = disposer.state
+		self.app = disposer.app
+
 	def _field_compare(self, alter_operation: AlterTableOperation, field: str, from_field: dict, to_field: dict):
 		for param in to_field.keys():
 			if from_field.get(param) != to_field.get(param):
@@ -61,7 +48,23 @@ class StateComparer:
 		for table in old_state_copy.keys():
 			migration.add_delete_table_operation(DeleteTableOperation(table))
 
-	def compare(self, from_state: State, to_state: State) -> Migration:
+	def compare(self, previous_state: object) -> Migration:
 		migration = Migration()
-		self._base_compare(migration, from_state.state, to_state.state)
+		self._base_compare(migration, previous_state.state, self.state)
 		return migration
+
+class State:
+	def __init__(self, app: App):
+		self.app = app
+		self.state = {}
+		self.comparer = StateComparer(self)
+
+	def build(self):
+		for model in self.app.get_models():
+			meta = model.__meta__
+			self.state[meta['name']] = {
+				'fields': dict(map(lambda f: (f.name, f.deconstruct()), meta['all_fields'])),
+			}
+
+	def mutate(self, migration_inner: dict):
+		Migration.apply_to_state(self.state, migration_inner)

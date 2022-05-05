@@ -18,7 +18,7 @@ class DataEngine:
 	def insert(self, table: str, fields: dict) -> str:
 		postfix = self.INSERT_VALUES_POSTFIX % {
 			'fields': self._prepare_tuple(fields.keys()),
-			'values': self._prepare_tuple(fields.values()),
+			'values': self._prepare_tuple(map(lambda val: f"'{val}'", fields.values())),
 		}
 		return self._insert(table, postfix)
 

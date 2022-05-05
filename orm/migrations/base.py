@@ -41,15 +41,13 @@ class MigrationEngine:
 
 		self.file_manager = MigrationFileManager(app)
 
-		self.comparer = StateComparer()
-
 	def _build_state(self) -> State:
-		state = State()
-		state.build(self._app.get_models())
+		state = State(self._app)
+		state.build()
 		return state
 
 	def _migrate_state(self) -> State:
-		state = State()
+		state = State(self._app)
 		for migration_inner in self.file_manager._get_previous_migrations():
 			state.mutate(migration_inner)
 		return state
@@ -58,7 +56,7 @@ class MigrationEngine:
 		prev_state = self._migrate_state()
 		state = self._build_state()
 
-		return self.comparer.compare(prev_state, state)
+		return state.comparer.compare(prev_state)
 		
 	def migrate(self, executor: BaseExecutor):
 		new_migraton = self.get_changes()
