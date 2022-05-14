@@ -1,4 +1,3 @@
-from typing import Tuple
 from mymvc2.apps.app import App
 from mymvc2.orm.migrations.migration import Migration
 from mymvc2.orm.migrations import operations

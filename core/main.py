@@ -2,7 +2,7 @@ from mymvc2.conf.settings import DEBUG
 from mymvc2.apps.registry import apps
 from mymvc2.core.request import Request
 from mymvc2.core.response import Response
-from mymvc2.core.response.default_responses import DebugReponse, get_default_page
+from mymvc2.core.response.default_responses import get_default_page
 from mymvc2.core.response.exceptions import ResponseException
 from mymvc2.view import View
 

@@ -1,7 +1,7 @@
 import os, json
 from typing import List
 from mymvc2.apps.app import App
-from mymvc2.orm.migrations.state import State, StateComparer
+from mymvc2.orm.migrations.state import State
 from mymvc2.orm.migrations.migration import Migration
 from mymvc2.orm.db.executor import BaseExecutor
 

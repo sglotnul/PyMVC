@@ -1,12 +1,13 @@
 import json
 from typing import List
-from mymvc2.orm.migrations.operations import Operation, CreateTableOperation, DeleteTableOperation, AlterTableOperation
+from mymvc2.orm.migrations.operations.base import Operation
+from mymvc2.orm.migrations import operations
 
 #Преставляет собой одну миграцию. Содержит информацию обо все примененных в ней операциях
 OPERATION_CLS = {
-	"CREATE_TABLE": CreateTableOperation,
-	"DELETE_TABLE": DeleteTableOperation,
-	"CHANGE_TABLE": AlterTableOperation,
+	"CREATE_TABLE": operations.CreateTableOperation,
+	"DELETE_TABLE": operations.DeleteTableOperation,
+	"CHANGE_TABLE": operations.AlterTableOperation,
 }
 
 class Migration:
@@ -33,13 +34,13 @@ class Migration:
 	def _execute(self, executor, query: str):
 		executor(query, script=True)
 
-	def add_create_table_operation(self, operation: CreateTableOperation):
+	def add_create_table_operation(self, operation: operations.CreateTableOperation):
 		self._add_operation("CREATE_TABLE", operation)
 
-	def add_delete_table_operation(self, operation: DeleteTableOperation):
+	def add_delete_table_operation(self, operation: operations.DeleteTableOperation):
 		self._add_operation("DELETE_TABLE", operation)
 
-	def add_change_table_operation(self, operation: AlterTableOperation):
+	def add_change_table_operation(self, operation: operations.AlterTableOperation):
 		self._add_operation("CHANGE_TABLE", operation)
 
 	def to_json(self) -> str:
