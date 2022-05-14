@@ -1,4 +1,5 @@
 from mymvc2.core.response import Response
+from mymvc2.core.response.exceptions import ResponseException
 
 class NotFound(Response):
 	def __init__(self):
@@ -8,10 +9,20 @@ class ServerError(Response):
 	def __init__(self):
 		super().__init__("500", "<h1>Server Error</h1>")
 
+class MethodNotAllowed(Response):
+	def __init__(self):
+		super().__init__("405", "<h1>Method Not Allowed</h1>")
+	
+class DebugReponse(Response):
+	def __init__(self, exception: Exception):
+		code = exception.code if isinstance(exception, ResponseException) else '500'
+		super().__init__(code, str(exception))
+
 PAGES = {
-	"404": NotFound(),
-	"500": ServerError()
+	'404': NotFound(),
+	'500': ServerError(),
+	'405': MethodNotAllowed(),
 }
 
-def get_default_page(code: str) -> Response:
+def get_default_page(code: str=None) -> Response:
 	return PAGES.get(code, PAGES['500'])

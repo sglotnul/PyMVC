@@ -1,16 +1,15 @@
-from abc import abstractmethod
 from mymvc2.orm.db.operator import Operator, OperatorRegistry
 
 def field_to_sql(field: str, data_type: str, default: str=None, null: bool=False) -> str:
-	FIELD_TMP = "%(field)s %(data_type)s"
+	FIELD_TMP = "{} {}"
 	NULL_POSTFIX = "NULL"
 	NOT_NULL_POSTFIX = "NOT NULL"
-	DEFAULT_POSTFIX = "DEFAULT %(value)s"
+	DEFAULT_POSTFIX = "DEFAULT {}"
 	separator = " "
 
-	raw_field_sql = FIELD_TMP % {'field': field, 'data_type': data_type}
+	raw_field_sql = FIELD_TMP.format(field, data_type)
 	if default is not None:
-		return raw_field_sql + separator + DEFAULT_POSTFIX % {'value': default}
+		return raw_field_sql + separator + DEFAULT_POSTFIX.format(default)
 	postfix = NOT_NULL_POSTFIX if not 'null' else NULL_POSTFIX
 	return raw_field_sql + separator + postfix
 
@@ -24,7 +23,6 @@ def operator_delegating_metod(func):
 	return wrapper
 
 class SchemaOperatorRegistry(OperatorRegistry):
-	@abstractmethod
 	def copy(self) -> object:
 		return self.__class__()
 
@@ -32,10 +30,10 @@ class SchemaOperator(Operator):
 	CMD = ""
 
 class CreateTableOperator(SchemaOperator):
-	CMD = "CREATE TABLE %(table)s;"
-	TABLE_TMP = "%(table)s (%(definition)s)"
-	FOREIGN_KEY = "FOREIGN KEY (%(field)s) REFERENCES %(references)s(%(key)s)"
-	PRIMARY_KEY = "PRIMARY KEY (%(field)s)"
+	CMD = "CREATE TABLE {};"
+	TABLE_TMP = "{} ({})"
+	FOREIGN_KEY = "FOREIGN KEY ({field}) REFERENCES {references}({key})"
+	PRIMARY_KEY = "PRIMARY KEY ({})"
 
 	def __init__(self):
 		self._tables = {}
@@ -57,9 +55,9 @@ class CreateTableOperator(SchemaOperator):
 				f_keys[field] = meta['references']
 			if meta.get('primary_key'):
 				p_key = field
-		constraints = list(self.FOREIGN_KEY % {'field': field, 'references': related_table, 'key': default_key} for field, related_table in f_keys.items())
+		constraints = list(self.FOREIGN_KEY.format(field=field, references=related_table, key=default_key) for field, related_table in f_keys.items())
 		if p_key:
-			constraints.append(self.PRIMARY_KEY % {'field': p_key})
+			constraints.append(self.PRIMARY_KEY.format(p_key))
 		return separator.join(constraints)
 
 	def _prepare_definition(self, fields: dict) -> str:
@@ -69,11 +67,8 @@ class CreateTableOperator(SchemaOperator):
 		return sql_view_fields + separator + constraints
 
 	def _create_single_table_query(self, table: str, fields: dict) -> str:
-		table_sql_view = self.TABLE_TMP % {
-			'table': table,
-			'definition': self._prepare_definition(fields),
-		}
-		return self.CMD % {'table': table_sql_view}
+		table_sql_view = self.TABLE_TMP.format(table, self._prepare_definition(fields))
+		return self.CMD.format(table_sql_view)
 
 	def set(self, table: str, fields: dict):
 		self._tables[table] = fields
@@ -86,7 +81,7 @@ class CreateTableOperator(SchemaOperator):
 		return bool(self._tables)
 
 class DeleteTableOperator(SchemaOperator):
-	CMD = "DROP TABLE %(tables)s;"
+	CMD = "DROP TABLE {};"
 
 	def __init__(self):
 		self._tables = []
@@ -101,7 +96,7 @@ class DeleteTableOperator(SchemaOperator):
 		}
 	
 	def __str__(self) -> str:
-		return self.CMD % self._get_tables_list()
+		return self.CMD.format(self._get_tables_list()) 
 	
 	def __bool__(self) -> bool:
 		return bool(self._tables)
@@ -119,57 +114,53 @@ class ChangeTableOperator(Operator):
 	def __bool__(self) -> bool:
 		return bool(self._schemas)
 
-class AlterTableOperator(Operator):
-	ALTER_TABLE = "ALTER TABLE %(table)s\n%(operation)s;"
+class AlterTable(Operator):
+	CMD = "ALTER TABLE {}"
 
 	def __init__(self, table: str):
+		self._table = None
+	
+	def set(self, table: str):
 		self._table = table
 
-class AlterTableSchemaOperator(AlterTableOperator):
-	@abstractmethod
-	def _create_operation_body(self) -> str:
-		raise NotImplementedError()
-
 	def __str__(self) -> str:
-		return self.ALTER_TABLE % {
-			'table': self._table,
-			'operation': self._create_operation_body(),
-		}
+		return self.CMD.format(self._table)
+	
+	def __bool__(self) -> bool:
+		return bool(self._table)
 
-class AddOperator(AlterTableSchemaOperator):
-	CMD = "ADD %(column)s"
+class AddOperator(Operator):
+	CMD = "ADD {}"
 
-	def __init__(self, table: str):
-		super().__init__(table)
+	def __init__(self):
 		self._cols = {}
 
 	def set(self, col: str, meta: dict):
 		self._cols[col] = meta
 	
 	def _add_single_field(self, field: str, meta: dict) -> str:
-		return self.CMD % {'column': field_to_sql(field, meta['data_type'], meta['default'], meta['null'])}
+		return self.CMD.format(field_to_sql(field, meta['data_type'], meta['default'], meta['null']))
 
-	def _create_operation_body(self) -> str:
+	def __str__(self) -> str:
 		separator = ","
 		return separator.join((self._add_single_field(field, meta) for field, meta in self._cols.items()))
 
 	def __bool__(self) -> bool:
 		return bool(self._cols)
 
-class DropOperator(AlterTableSchemaOperator):
-	CMD = "DROP %(column)s"
+class DropOperator(Operator):
+	CMD = "DROP {}"
 
-	def __init__(self, table: str):
-		super().__init__(table)
+	def __init__(self):
 		self._cols = []
 
 	def set(self, col: str):
 		self._cols.append(col)
 	
 	def _drop_single_column(self, col: str) -> str:
-		return self.CMD % {'column': col}
+		return self.CMD.format(col)
 
-	def _create_operation_body(self) -> str:
+	def __str__(self) -> str:
 		separator = ","
 		return separator.join(self._drop_single_column(col) for col in self._cols)
 
@@ -177,41 +168,36 @@ class DropOperator(AlterTableSchemaOperator):
 		return bool(self._cols)
 
 class AlterOperator(AddOperator):
-	CMD = "CHANGE %(column)s"
+	CMD = "CHANGE {}"
 
-class RenameOperator(AlterTableSchemaOperator):
-	CMD = "RENAME TO %(name)s"
+class RenameOperator(Operator):
+	CMD = "RENAME TO {}"
 
-	def __init__(self, table: str):
-		super().__init__(table)
+	def __init__(self):
 		self._name = None
 
 	def set(self, name: str):
 		self._name = name
 
-	def _create_operation_body(self) -> str:
-		return self.CMD % {'name': self._name}
+	def __str__(self) -> str:
+		return self.CMD.format(self._name)
 
 	def __bool__(self) -> bool:
 		return bool(self._name)
 	
-class AddForeignKeyOperator(AlterTableSchemaOperator):
-	CMD  = "ADD FOREIGN KEY (%(field)s) REFERENCES %(references)s(id)"
+class AddForeignKeyOperator(Operator):
+	CMD  = "ADD FOREIGN KEY ({field}) REFERENCES {references}(id)"
 
-	def __init__(self, table: str):
-		super().__init__(table)
+	def __init__(self):
 		self._foreign_keys = {}
 
 	def set(self, col: str, table: str):
 		self._foreign_keys[col] = table
 
 	def _add_single_fk(self, col: str, table: str) -> str:
-		return self.CMD % {
-			'field': col,
-			'references': table,
-		}
+		return self.CMD.format(field=col, references=table)
 
-	def _create_operation_body(self) -> str:
+	def __str__(self) -> str:
 		separator = ","
 		return separator.join((self._add_single_fk(field, table) for field, table in self._foreign_keys.items()))
 	

@@ -1,4 +1,4 @@
-from abc import ABC, abstractclassmethod, abstractmethod
+from abc import ABC, abstractmethod
 from mymvc2.orm.db.schema import SchemaEngine
 from mymvc2.orm.db.query import Query
 from mymvc2.orm.db.entries import DataEngine
@@ -8,16 +8,8 @@ class BaseExecutor(ABC):
 	query = Query
 	data_engine = DataEngine
 
-	@abstractclassmethod
-	def connect(cls):
-		raise NotImplementedError()
-
 	@abstractmethod
 	def __init__(self, executor):
-		raise NotImplementedError()
-
-	@abstractmethod
-	def fetch(self):
 		raise NotImplementedError()
 
 	@abstractmethod
@@ -37,5 +29,5 @@ class BaseExecutor(ABC):
 		raise NotImplementedError()
 	
 	@abstractmethod
-	def __call__(self, query: str, *, script=False):
+	def __call__(self, query: str, *args, script=False):
 		raise NotImplementedError()

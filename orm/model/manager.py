@@ -1,5 +1,5 @@
 from mymvc2.orm.db.connection import connect
-from mymvc2.orm.db.query import QuerySet
+from mymvc2.orm.model.query_set import QuerySet
 
 class Manager:
 	def __init__(self, model_cls: type):
@@ -12,25 +12,23 @@ class Manager:
 		return QuerySet(self._model, self._executor)
 
 	def _create_entry(self, query: str) -> int:
-		self._executor(query)
-		return self._executor.get_lastrowid()
+		cur = self._executor(query)
+		return cur.lastrowid
 
 	def create(self, **params):
-		fields = {}
+		inserter = self._data_engine.insert(self._model.__meta__['name'])
 		for field in self._model.__meta__['all_fields']:
 			if not field.autoincrement:
 				val = params.get(field.name, None)
 				if val is None:
 					raise Exception(f"{field.name} field is reqired")
-				fields[field.name] = val
-		query = self._data_engine.insert(self._model.__meta__['name'], fields)
-		lastrowid = self._create_entry(query)
+				inserter.insert(field.name, val)	
+		lastrowid = self._create_entry(str(inserter))
 		return self.get(id=lastrowid)
 
 	def remove(self, **params):
-		query = self._data_engine.remove(self._model.__meta__['name'], params)
-		self._executor(query)
-		self._executor.commit()
+		remover = self._data_engine.remove(self._model.__meta__['name'])
+		self._executor(remover.where(**params, instantly=True))
 
 	def all(self) -> QuerySet:
 		return self.get_queryset()

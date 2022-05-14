@@ -1,6 +1,6 @@
 import json
 from typing import List
-from mymvc2.orm.migrations.operations.base import Operation, CreateTableOperation, DeleteTableOperation, AlterTableOperation
+from mymvc2.orm.migrations.operations import Operation, CreateTableOperation, DeleteTableOperation, AlterTableOperation
 
 #Преставляет собой одну миграцию. Содержит информацию обо все примененных в ней операциях
 OPERATION_CLS = {

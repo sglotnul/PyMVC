@@ -1,6 +1,6 @@
 from mymvc2.orm.db.schema import operators
 
-class TableSchemaEngine(operators.SchemaOperatorRegistry):
+class BaseTableSchemaEngine(operators.SchemaOperatorRegistry):
 	def __init__(self, table: str, fields: dict):
 		self._table = table
 		self._fields = fields
@@ -33,12 +33,23 @@ class TableSchemaEngine(operators.SchemaOperatorRegistry):
 		return self.__class__(schema or self._schema, table or self._table, fields or self._fields)
 		
 	def reset(self):
-		self._operators['drop'] = operators.DropOperator(self._table)
-		self._operators['add'] = operators.AddOperator(self._table)
-		self._operators['alter'] = operators.AlterOperator(self._table)
-		self._operators['add_fk'] = operators.AddForeignKeyOperator(self._table)
-		self._operators['rename_to'] = operators.RenameOperator(self._table)
+		self._operators['drop'] = operators.DropOperator()
+		self._operators['add'] = operators.AddOperator()
+		self._operators['alter'] = operators.AlterOperator()
+		self._operators['add_fk'] = operators.AddForeignKeyOperator()
+		self._operators['rename_to'] = operators.RenameOperator()
 
+class TableSchemaEngine(BaseTableSchemaEngine):
+	def __init__(self):
+		super().__init__()
+		self._init_operator = operators.AlterTable()
+		self._init_operator.set(self._table)
+
+	def __str__(self) -> str:
+		separator = ",\n"
+		query = separator.join(str(operator) for operator in self._operators.values() if operator)
+		return query and (str(self._init_operator) + "\n" + query + ";")
+		
 class SchemaEngine(operators.SchemaOperatorRegistry):
 	@operators.operator_delegating_metod
 	def create_table(self, table: str, fields: dict) -> str:
@@ -52,9 +63,6 @@ class SchemaEngine(operators.SchemaOperatorRegistry):
 		table_schema_engine = TableSchemaEngine(table, fields)
 		self._operators['alter_table'].set(table_schema_engine)
 		return table_schema_engine
-	
-	def copy(self) -> object:
-		return self.__class__()
 	
 	def reset(self):
 		self._operators['delete_table'] = operators.DeleteTableOperator()

@@ -11,7 +11,7 @@ class Response:
 	def __init__(self, status: str, body: bytes, *, headers = {}):
 		self.status = status
 		if not isinstance(body, bytes):
-			body = body.encode('utf-8')
+			body = body.encode("utf-8")
 		self.body = body
 		
 		self._headers = {}
@@ -25,6 +25,10 @@ class Response:
 	
 	def get_headers(self) -> Tuple[Tuple[str]]:
 		return tuple(self._headers.items())
+	
+class JsonResponse(Response):
+	def __init__(self, status: str, body: bytes, *, headers = {}):
+		super().__init__(status, body, headers={"Content-Type": "application/json; charset=utf-8"})
 
 def render(template_url: str, context: dict) -> Response:
 	with open(os.path.join(TEMPLATE_PATH, template_url), 'rb') as template_io:
@@ -32,4 +36,4 @@ def render(template_url: str, context: dict) -> Response:
 		return Response('200', template_bytes)
 
 def redirect(url: str) -> Response:
-    return Response('301', 'Redirecting...', headers={'Location': url})
+    return Response('302', "Redirecting...", headers={'Location': url})

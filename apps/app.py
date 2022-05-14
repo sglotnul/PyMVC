@@ -1,4 +1,4 @@
-import inspect, os, sys
+import inspect, os
 from typing import Tuple
 from mymvc2.conf.settings import BASE_DIR
 from mymvc2.orm.model.models import Model

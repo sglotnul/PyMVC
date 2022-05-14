@@ -23,5 +23,5 @@ class OperatorRegistry(ABC):
 		raise NotImplementedError()
 
 	def __str__(self) -> str:
-		postfix = "\n"
-		return postfix.join((str(operator) for operator in self._operators.values() if operator))
+		separator = "\n"
+		return separator.join(str(operator) for operator in self._operators.values() if operator)
