@@ -6,8 +6,8 @@ class Query(OperatorRegistry):
 	def __init__(self, table: str, *args, fields: Tuple[str] = None):
 		if fields is None:
 			fields = []
-		self._init_operator = operators.SelectOperator()
-		self._init_operator.set(table, fields)
+		self._table = table
+		self._fields = fields
 		super().__init__()
 
 	def filter(self, *args, **params):
@@ -20,10 +20,12 @@ class Query(OperatorRegistry):
 		self._operators['limit'].set(limit)
 
 	def reset(self):
+		self._operators['select'] = operators.SelectOperator()
+		self._operators['select'].set(self._table, self._fields)
 		self._operators['where'] = operators.WhereOperator()
 		self._operators['order_by'] = operators.OrderOperator()
 		self._operators['limit'] = operators.LimitOperator()
 	
 	def __str__(self) -> str:
 		query = super().__str__()
-		return query and (str(self._init_operator) + "\n" + query + ";")
+		return query and query + ";"

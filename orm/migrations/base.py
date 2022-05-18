@@ -63,9 +63,3 @@ class MigrationEngine:
 		new_migraton.apply(executor)
 
 		self.file_manager.commit(new_migraton)
-
-if __name__ == "__main__":
-	from mymvc2.apps.registry import apps
-	from mymvc2.orm.db.connection import connect
-	e = MigrationEngine(list(apps.registered_apps.values())[0])
-	e.migrate(connect())

@@ -30,5 +30,11 @@ class Model(metaclass=ModelBase):
 				raise Exception(f"{field.name} field is reqired")
 			field.__set__(self, val)
 
+	@classmethod
+	def deconstruct(cls) -> dict:
+		return {
+			'fields': dict(map(lambda f: (f.name, f.deconstruct()), cls.__meta__['all_fields'])),
+		}
+
 	def remove(self):
 		self.__class__.manager.remove(id=self.id)

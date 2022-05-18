@@ -11,10 +11,20 @@ class Manager:
 	def get_queryset(self):
 		return QuerySet(self._model, self._executor)
 
+	def all(self) -> QuerySet:
+		return self.get_queryset()
+
+	def filter(self, **params) -> QuerySet:
+		return self.get_queryset().filter(**params)
+
+	def get(self, **params) -> object:
+		model = self.get_queryset().get(**params)
+		return model
+
 	def _create_entry(self, query: str) -> int:
 		cur = self._executor(query)
 		return cur.lastrowid
-
+	
 	def create(self, **params):
 		inserter = self._data_engine.insert(self._model.__meta__['name'])
 		for field in self._model.__meta__['all_fields']:
@@ -30,13 +40,10 @@ class Manager:
 		remover = self._data_engine.remove(self._model.__meta__['name'])
 		self._executor(remover.where(**params, instantly=True))
 
-	def all(self) -> QuerySet:
-		return self.get_queryset()
-
-	def filter(self, **params) -> QuerySet:
-		return self.get_queryset().filter(**params)
-
-	def get(self, **params) -> object:
-		model = self.get_queryset().get(**params)
-		return model
+	def update(self, cols: dict, **params):
+		updater = self._data_engine.update(self._model.__meta__['name'])
+		updater.where(**params)
+		for col, val in cols.items():
+			updater.set(col, val)
+		self._executor(str(updater))
 

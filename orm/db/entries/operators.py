@@ -1,3 +1,4 @@
+from typing import Union
 from mymvc2.orm.db.operator import Operator
 
 class InsertIntoOperator(Operator):
@@ -37,3 +38,19 @@ class InsertValuesOperator(Operator):
 
 class DeleteFromOperator(InsertIntoOperator):
 	CMD = "DELETE FROM {}"
+
+class UpdateOperator(InsertIntoOperator):
+	CMD = "UPDATE {}"
+
+class SetOperator(InsertValuesOperator):
+	CMD = "SET {}"
+	COLUMN = "{}={}"
+	VALUE = "\"{}\""
+
+	def _prepare_value(self, val: any) -> Union[str, int]:
+		return self.VALUE.format(val) if not isinstance(val, int) else val
+
+	def __str__(self) -> str:
+		separator = ","
+		return self.CMD.format(separator.join(self.COLUMN.format(col, self._prepare_value(val)) for col, val in self._values.items()))
+

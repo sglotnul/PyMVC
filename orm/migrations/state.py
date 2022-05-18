@@ -10,7 +10,7 @@ class StateComparer:
 	def _field_compare(self, alter_operation: operations.AlterTableOperation, field: str, from_field: dict, to_field: dict):
 		for param in to_field.keys():
 			if from_field.get(param) != to_field.get(param):
-				alter_operation.add_change_field_suboperation(operations.ChangeFieldSubOperation(field, to_field))
+				alter_operation.add_change_field_suboperation(field, to_field)
 				break
 
 	def _deep_compare(self, migration: Migration, table: str, from_meta: dict, to_meta: dict):
@@ -18,20 +18,17 @@ class StateComparer:
 		to_fields = to_meta['fields']
 
 		old_fields_copy = from_fields.copy()
-		alter_operation = operations.AlterTableOperation(table, from_meta)
+		alter_operation = migration.add_change_table_operation(table, from_meta)
 
 		for field, definition in to_fields.items():
 			try:
 				del old_fields_copy[field]
 			except KeyError:
-				alter_operation.add_create_field_suboperation(operations.CreateFieldSubOperation(field, definition))
+				alter_operation.add_create_field_suboperation(field, definition)
 			else:
 				self._field_compare(alter_operation, field, from_fields[field], to_fields[field])
 		for field in old_fields_copy.keys():
-			alter_operation.add_delete_field_suboperation(operations.DeleteFieldSubOperation(field))
-
-		if alter_operation:
-			migration.add_change_table_operation(alter_operation)
+			alter_operation.add_delete_field_suboperation(field)
 
 	def _base_compare(self, migration: Migration, from_state: dict, to_state: dict):
 		old_state_copy = from_state.copy()
@@ -39,12 +36,12 @@ class StateComparer:
 			try:
 				del old_state_copy[table]
 			except KeyError:
-				migration.add_create_table_operation(operations.CreateTableOperation(table, meta))
+				migration.add_create_table_operation(table, meta)
 			else:
 				old_meta = from_state[table]
 				self._deep_compare(migration, table, old_meta, meta)
 		for table in old_state_copy.keys():
-			migration.add_delete_table_operation(operations.DeleteTableOperation(table))
+			migration.add_delete_table_operation(table)
 
 	def compare(self, previous_state: object) -> Migration:
 		migration = Migration()
@@ -59,10 +56,10 @@ class State:
 
 	def build(self):
 		for model in self.app.get_models():
-			meta = model.__meta__
-			self.state[meta['name']] = {
-				'fields': dict(map(lambda f: (f.name, f.deconstruct()), meta['all_fields'])),
-			}
+			name = model.__meta__['name']
+			self.state[name] = model.deconstruct()
 
 	def mutate(self, migration_inner: dict):
-		Migration.apply_to_state(self.state, migration_inner)
+		migration = Migration()
+		migration.from_entry(migration_inner)
+		migration.apply_to_state(self)

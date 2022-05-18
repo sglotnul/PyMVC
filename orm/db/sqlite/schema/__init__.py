@@ -30,6 +30,15 @@ class SQLiteTableSchemaEngine(BaseTableSchemaEngine):
 		self._operators['add'] = operators.SQliteAddOperator(self)
 		self._operators['add_fk'] = operators.SQliteAddForeignKeyOperator(self)
 		self._operators['rename_to'] = operators.SQliteRenameOperator(self)
+	
+	def __str__(self) -> str:
+		separator = "\n"
+		applied_operators = []
+		for operator in self._operators.values():
+			if operator:
+				operator.mutate_disposer_state()
+				applied_operators.append(str(operator))
+		return separator.join(applied_operators)
 
 class SQLiteSchemaEngine(SchemaEngine):
 	def alter_table(self, table: str, fields: dict) -> SQLiteTableSchemaEngine:

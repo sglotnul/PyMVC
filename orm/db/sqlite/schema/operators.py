@@ -38,12 +38,10 @@ class SQliteAddOperator(SQLiteAlterTableOperator):
 		state = self._disposer.get_state()
 		for col, meta in self._cols.items():
 			if state.get(col):
-				raise Exception("")
+				raise Exception("column already exists")
 			state[col] = meta
 
 	def __str__(self) -> str:
-		self.mutate_disposer_state()
-
 		separator = "\n"
 
 		return separator.join(self.CMD.format(
@@ -66,18 +64,15 @@ class SQLiteDropOperator(SQLiteAlterTableOperator):
 		data_type = meta["data_type"]
 		return f"{field} {data_type}"
 	
-	def mutate_disposer_state(self) -> dict:
+	def mutate_disposer_state(self):
 		state = self._disposer.get_state()
 		for col in self._cols:
 			try:
 				del state[col]
 			except: 
-				raise Exception("")
-		return state
+				raise Exception("unable to drop nonexistent column")
 
 	def __str__(self) -> str:
-		self.mutate_disposer_state()
-
 		disposer = self._disposer
 
 		table_name = disposer.get_table_name()
@@ -112,15 +107,14 @@ class SQliteAddForeignKeyOperator(SQLiteDropOperator):
 	def set(self, col: str, table: str):
 		self._cols[col] = table
 
-	def mutate_disposer_state(self) -> dict:
+	def mutate_disposer_state(self):
 		state = self._disposer.get_state()
 		for col, table in self._cols.items():
 			if not state.get(col):
-				raise Exception("")
+				raise Exception("unable to add foreign key to nonexistent column")
 			state[col]['references'] = table
-		return state
 	
-class SQliteRenameOperator(Operator):
+class SQliteRenameOperator(SQLiteAlterTableOperator):
 	CMD = "ALTER TABLE {} RENAME TO {};"
 
 	def __init__(self, disposer: object):
@@ -129,6 +123,9 @@ class SQliteRenameOperator(Operator):
 
 	def set(self, name: str):
 		self._name = name
+
+	def mutate_disposer_state(self):
+		pass
 	
 	def __str__(self) -> str:
 		return self.CMD.format(self._disposer.get_table_name(), self._name)
