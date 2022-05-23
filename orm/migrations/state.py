@@ -1,16 +1,16 @@
 from mymvc2.apps.app import App
-from mymvc2.orm.migrations.migration import Migration
-from mymvc2.orm.migrations import operations
+from .migration import Migration
+from .operations import *
 
 class StateComparer:
 	def __init__(self, disposer: object): 
 		self.state = disposer.state
 		self.app = disposer.app
 
-	def _field_compare(self, alter_operation: operations.AlterTableOperation, field: str, from_field: dict, to_field: dict):
+	def _field_compare(self, get_alter_table_operation, field: str, from_field: dict, to_field: dict):
 		for param in to_field.keys():
 			if from_field.get(param) != to_field.get(param):
-				alter_operation.add_change_field_suboperation(field, to_field)
+				get_alter_table_operation().add_change_field_suboperation(field, to_field)
 				break
 
 	def _deep_compare(self, migration: Migration, table: str, from_meta: dict, to_meta: dict):
@@ -18,17 +18,23 @@ class StateComparer:
 		to_fields = to_meta['fields']
 
 		old_fields_copy = from_fields.copy()
-		alter_operation = migration.add_change_table_operation(table, from_meta)
+		alter_operation = None
+
+		def get_alter_table_operation() -> AlterTableOperation:
+			nonlocal alter_operation, migration
+			if alter_operation is None:
+				alter_operation = migration.add_change_table_operation(table, from_meta)
+			return alter_operation
 
 		for field, definition in to_fields.items():
 			try:
 				del old_fields_copy[field]
 			except KeyError:
-				alter_operation.add_create_field_suboperation(field, definition)
+				get_alter_table_operation().add_create_field_suboperation(field, definition)
 			else:
-				self._field_compare(alter_operation, field, from_fields[field], to_fields[field])
+				self._field_compare(get_alter_table_operation, field, from_fields[field], to_fields[field])
 		for field in old_fields_copy.keys():
-			alter_operation.add_delete_field_suboperation(field)
+			get_alter_table_operation().add_delete_field_suboperation(field)
 
 	def _base_compare(self, migration: Migration, from_state: dict, to_state: dict):
 		old_state_copy = from_state.copy()
@@ -56,8 +62,7 @@ class State:
 
 	def build(self):
 		for model in self.app.get_models():
-			name = model.__meta__['name']
-			self.state[name] = model.deconstruct()
+			self.state[model.meta['name']] = model.deconstruct()
 
 	def mutate(self, migration_inner: dict):
 		migration = Migration()

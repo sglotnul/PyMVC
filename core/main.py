@@ -1,10 +1,9 @@
 from mymvc2.conf.settings import DEBUG
 from mymvc2.apps.registry import apps
-from mymvc2.core.request import Request
-from mymvc2.core.response import Response
-from mymvc2.core.response.default_responses import get_default_page
-from mymvc2.core.response.exceptions import ResponseException
 from mymvc2.view import View
+from mymvc2.core.response import Response
+from request import Request
+from response import default_responses, exceptions
 
 class PyMVC:
 	def _get_request(self, environ: dict) -> Request:
@@ -15,20 +14,20 @@ class PyMVC:
 			for urlpattern in app.get_urlpatterns():
 				if urlpattern.match(url):
 					return urlpattern.get_view()
-		raise ResponseException(404, "view not found")
+		raise exceptions.ResponseException(404, "view not found")
 	
 	def _get_response(self, request: Request, url: str) -> Response:
 		try:
 			view = self._find_view(url)
 			response = view(request)
 			if not isinstance(response, Response):
-				raise ResponseException(500, "view didn't return Response object")
+				raise exceptions.ResponseException(500, "view didn't return Response object")
 			return response
 		except Exception as exc:
 			if not DEBUG:
-				if isinstance(exc, ResponseException):
-					return get_default_page(exc.code)
-				return get_default_page()
+				if isinstance(exc, exceptions.ResponseException):
+					return default_responses.get_default_page(exc.code)
+				return default_responses.get_default_page()
 			raise exc
 
 	def _start_response(self, response: Response, start_response):

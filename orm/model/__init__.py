@@ -1,19 +1,25 @@
 from inspect import getmembers
+from .fields import PrimaryKeyField
+from .manager import Manager
 from mymvc2.orm.model.fields.base import Field
-from mymvc2.orm.model.fields import PrimaryKeyField
-from mymvc2.orm.model.manager import Manager
 
-MODEL_META_ATTR = "__meta__"
-MANAGER_ATTR = "manager"
+PRIVATE_ATTRS = (
+	"meta",
+	"manager",
+)
 
 class ModelBase(type):
 	def __new__(mcs, name, parents, attributes) -> object:
+		invalid_attrs = tuple(filter(lambda attr: attr in PRIVATE_ATTRS, attributes.keys()))
+		if invalid_attrs:
+			raise Exception(f"{','.join(invalid_attrs)} are invalid attribute names")
+
 		new_cls = super(ModelBase, mcs).__new__(mcs, name, parents, attributes)
 
-		setattr(new_cls, MANAGER_ATTR, Manager(new_cls))
+		setattr(new_cls, "manager", Manager(new_cls))
 
 		fields = tuple(map(lambda i: i[1], getmembers(new_cls, lambda m: isinstance(m, Field))))
-		setattr(new_cls, MODEL_META_ATTR, {
+		setattr(new_cls, "meta", {
 			'name': name.lower(),
 			'all_fields': fields,
 		})
@@ -24,17 +30,32 @@ class Model(metaclass=ModelBase):
 	id = PrimaryKeyField()
 
 	def __init__(self, **fields):
-		for field in self.__class__.__meta__['all_fields']:
-			val = fields.get(field.name)
-			if val is None and not field.default:
-				raise Exception(f"{field.name} field is reqired")
-			field.__set__(self, val)
+		self._state = {}
+		self.cls = self.__class__
 
+		for field in self.cls.meta['all_fields']:
+			val = fields.get(field.name, None)
+			if val is None and not field.null:
+				raise Exception(f"{field.name} field is reqired")
+			setattr(self, field.name, val)
+			self._state[field.name] = val
+	
 	@classmethod
 	def deconstruct(cls) -> dict:
-		return {
-			'fields': dict(map(lambda f: (f.name, f.deconstruct()), cls.__meta__['all_fields'])),
-		}
+		return {'fields': dict(map(lambda f: (f.name, f.deconstruct()), cls.meta['all_fields'])),}
+
+	def save(self):
+		cols = {}
+		for field in self.cls.meta['all_fields']:
+			val = getattr(self, field.name)
+			if val != self._state[field.name]:
+				cols[field.name] = val
+		if cols:
+			self._state.update(cols)
+			self.cls.manager.update(cols, id=self.id)
+	
+	def reset(self):
+		self.__dict__.update(self._state)
 
 	def remove(self):
-		self.__class__.manager.remove(id=self.id)
+		self.cls.manager.remove(id=self.id)

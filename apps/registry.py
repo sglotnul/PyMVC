@@ -1,7 +1,7 @@
 import inspect, sys
 from importlib import import_module
 from mymvc2.conf.settings import REGISTERED_APPS, BASE_DIR
-from mymvc2.apps.app import App, get_is_exactly_subclass_checker
+from .app import App, get_is_exactly_subclass_checker
 
 separator = "."
 APP_MODULE_NAME = "apps"

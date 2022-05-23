@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from mymvc2.orm.db.operator import Operator
-from mymvc2.orm.db.schema.operators import field_to_sql
+from mymvc2.orm.db.backends.mysql.schema.operators import field_to_sql
 from mymvc2.orm.db.entries import DataEngine
 
 class SQliteDeleteTableOperation(Operator):
@@ -12,7 +12,7 @@ class SQliteDeleteTableOperation(Operator):
 	def set(self, table: str):
 		self._cols.append(table)
 
-	def __str__(self) -> str:
+	def to_str(self) -> str:
 		separator = "\n"
 		return separator.join(self.CMD.format(table) for table in self._cols)
 
@@ -41,7 +41,7 @@ class SQliteAddOperator(SQLiteAlterTableOperator):
 				raise Exception("column already exists")
 			state[col] = meta
 
-	def __str__(self) -> str:
+	def to_str(self) -> str:
 		separator = "\n"
 
 		return separator.join(self.CMD.format(
@@ -72,7 +72,7 @@ class SQLiteDropOperator(SQLiteAlterTableOperator):
 			except: 
 				raise Exception("unable to drop nonexistent column")
 
-	def __str__(self) -> str:
+	def to_str(self) -> str:
 		disposer = self._disposer
 
 		table_name = disposer.get_table_name()
@@ -80,21 +80,14 @@ class SQLiteDropOperator(SQLiteAlterTableOperator):
 
 		backup_fields = disposer.get_state()
 
-		schema = disposer.get_schema()
-		backup_table_schema = schema.alter_table(backup_table_name, backup_fields)
-		data_engine = DataEngine()
-		inserter = data_engine.insert(backup_table_name)
-
 		separator = "\n"
 
-		command_tuple = (
-			schema.create_table(backup_table_name, backup_fields, instantly=True) ,
-			inserter.insert_from(table_name, tuple(backup_fields.keys()), instantly=True),
-			schema.delete_table(table_name, instantly=True),
-			backup_table_schema.rename_to(table_name, instantly=True),
-		)
-
-		return separator.join(command_tuple)
+		return separator.join((
+			disposer.get_schema().create_table(backup_table_name, backup_fields).to_str(),
+			DataEngine().insert(backup_table_name).insert_from(table_name, tuple(backup_fields.keys())).to_str(),
+			disposer.get_schema().delete_table(table_name).to_str(),
+			disposer.__class__(disposer.get_schema(), backup_table_name, backup_fields).rename_to(table_name).to_str(),
+		))
 
 	def __bool__(self) -> bool:
 		return bool(self._cols)
@@ -127,7 +120,7 @@ class SQliteRenameOperator(SQLiteAlterTableOperator):
 	def mutate_disposer_state(self):
 		pass
 	
-	def __str__(self) -> str:
+	def to_str(self) -> str:
 		return self.CMD.format(self._disposer.get_table_name(), self._name)
 
 	def __bool__(self) -> bool:

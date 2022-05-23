@@ -1,4 +1,6 @@
-from mymvc2.orm.db.operator import Operator, OperatorRegistry
+from mymvc2.orm.db.operator import Operator
+
+comma = ","
 
 def field_to_sql(field: str, data_type: str, default: str=None, null: bool=False) -> str:
 	FIELD_TMP = "{} {}"
@@ -13,23 +15,7 @@ def field_to_sql(field: str, data_type: str, default: str=None, null: bool=False
 	postfix = NOT_NULL_POSTFIX if not 'null' else NULL_POSTFIX
 	return raw_field_sql + separator + postfix
 
-def operator_delegating_metod(func):
-	def wrapper(self, *args, instantly=False, **kwargs):
-		if instantly:
-			schema = self.copy()
-			func.__get__(schema, schema.__class__)(*args, **kwargs)
-			return str(schema)
-		return func(self, *args, **kwargs)
-	return wrapper
-
-class SchemaOperatorRegistry(OperatorRegistry):
-	def copy(self) -> object:
-		return self.__class__()
-
-class SchemaOperator(Operator):
-	CMD = ""
-
-class CreateTableOperator(SchemaOperator):
+class CreateTableOperator(Operator):
 	CMD = "CREATE TABLE {};"
 	TABLE_TMP = "{} ({})"
 	FOREIGN_KEY = "FOREIGN KEY ({field}) REFERENCES {references}({key})"
@@ -42,29 +28,26 @@ class CreateTableOperator(SchemaOperator):
 		return field_to_sql(field, meta['data_type'], meta['default'], meta['null'])
 	
 	def _prepare_fields(self, fields: dict) -> str:
-		separator = ","
-		return separator.join((self._field_to_sql(field, meta) for field, meta in fields.items()))
+		return comma.join((self._field_to_sql(field, meta) for field, meta in fields.items()))
 	
 	def _prepare_constraints(self, fields: dict) -> str:
-		separator = ","
 		default_key = "id"
-		f_keys = {}
+		f_keys = []
 		p_key = None
 		for field, meta in fields.items():
 			if meta.get('references'):
-				f_keys[field] = meta['references']
+				f_keys.append((field, meta['references']))
 			if meta.get('primary_key'):
 				p_key = field
-		constraints = list(self.FOREIGN_KEY.format(field=field, references=related_table, key=default_key) for field, related_table in f_keys.items())
+		constraints = list(self.FOREIGN_KEY.format(field=field, references=related_table, key=default_key) for field, related_table in f_keys)
 		if p_key:
 			constraints.append(self.PRIMARY_KEY.format(p_key))
-		return separator.join(constraints)
+		return comma.join(constraints)
 
 	def _prepare_definition(self, fields: dict) -> str:
-		separator = ","
 		sql_view_fields = self._prepare_fields(fields)
 		constraints = self._prepare_constraints(fields)
-		return sql_view_fields + separator + constraints
+		return sql_view_fields + comma + constraints
 
 	def _create_single_table_query(self, table: str, fields: dict) -> str:
 		table_sql_view = self.TABLE_TMP.format(table, self._prepare_definition(fields))
@@ -73,14 +56,14 @@ class CreateTableOperator(SchemaOperator):
 	def set(self, table: str, fields: dict):
 		self._tables[table] = fields
 
-	def __str__(self) -> str:
+	def to_str(self) -> str:
 		separator = "\n"
 		return separator.join(self._create_single_table_query(table, fields) for table, fields in self._tables.items())
 	
 	def __bool__(self) -> bool:
 		return bool(self._tables)
 
-class DeleteTableOperator(SchemaOperator):
+class DeleteTableOperator(Operator):
 	CMD = "DROP TABLE {};"
 
 	def __init__(self):
@@ -90,12 +73,11 @@ class DeleteTableOperator(SchemaOperator):
 		self._tables.append(table)
 
 	def _get_tables_list(self) -> dict:
-		separator = ","
 		return {
-			'tables': separator.join(self._tables)
+			'tables': comma.join(self._tables)
 		}
 	
-	def __str__(self) -> str:
+	def to_str(self) -> str:
 		return self.CMD.format(self._get_tables_list()) 
 	
 	def __bool__(self) -> bool:
@@ -108,8 +90,8 @@ class ChangeTableOperator(Operator):
 	def set(self, schema: object):
 		self._schemas.append(schema)
 
-	def __str__(self) -> str:
-		return "\n".join((str(schema) for schema in self._schemas))
+	def to_str(self) -> str:
+		return "\n".join(schema.to_str() for schema in self._schemas)
 
 	def __bool__(self) -> bool:
 		return bool(self._schemas)
@@ -117,13 +99,13 @@ class ChangeTableOperator(Operator):
 class AlterTable(Operator):
 	CMD = "ALTER TABLE {}"
 
-	def __init__(self, table: str):
+	def __init__(self):
 		self._table = None
 	
 	def set(self, table: str):
 		self._table = table
 
-	def __str__(self) -> str:
+	def to_str(self) -> str:
 		return self.CMD.format(self._table)
 	
 	def __bool__(self) -> bool:
@@ -141,9 +123,8 @@ class AddOperator(Operator):
 	def _add_single_field(self, field: str, meta: dict) -> str:
 		return self.CMD.format(field_to_sql(field, meta['data_type'], meta['default'], meta['null']))
 
-	def __str__(self) -> str:
-		separator = ","
-		return separator.join((self._add_single_field(field, meta) for field, meta in self._cols.items()))
+	def to_str(self) -> str:
+		return comma.join((self._add_single_field(field, meta) for field, meta in self._cols.items()))
 
 	def __bool__(self) -> bool:
 		return bool(self._cols)
@@ -160,9 +141,8 @@ class DropOperator(Operator):
 	def _drop_single_column(self, col: str) -> str:
 		return self.CMD.format(col)
 
-	def __str__(self) -> str:
-		separator = ","
-		return separator.join(self._drop_single_column(col) for col in self._cols)
+	def to_str(self) -> str:
+		return comma.join(self._drop_single_column(col) for col in self._cols)
 
 	def __bool__(self) -> bool:
 		return bool(self._cols)
@@ -179,7 +159,7 @@ class RenameOperator(Operator):
 	def set(self, name: str):
 		self._name = name
 
-	def __str__(self) -> str:
+	def to_str(self) -> str:
 		return self.CMD.format(self._name)
 
 	def __bool__(self) -> bool:
@@ -197,9 +177,8 @@ class AddForeignKeyOperator(Operator):
 	def _add_single_fk(self, col: str, table: str) -> str:
 		return self.CMD.format(field=col, references=table)
 
-	def __str__(self) -> str:
-		separator = ","
-		return separator.join((self._add_single_fk(field, table) for field, table in self._foreign_keys.items()))
+	def to_str(self) -> str:
+		return comma.join((self._add_single_fk(field, table) for field, table in self._foreign_keys.items()))
 	
 	def __bool__(self) -> bool:
 		return bool(self._foreign_keys)

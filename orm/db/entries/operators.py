@@ -10,7 +10,7 @@ class InsertIntoOperator(Operator):
 	def set(self, table: str):
 		self._table = table
 
-	def __str__(self) -> str:
+	def to_str(self) -> str:
 		return self.CMD.format(self._table)
 
 	def __bool__(self) -> bool:
@@ -26,7 +26,7 @@ class InsertValuesOperator(Operator):
 	def set(self, field: str, value: any):
 		self._values[field] = value
 
-	def __str__(self) -> str:
+	def to_str(self) -> str:
 		separator = ","
 		return self.CMD.format(
 			fields=separator.join(self._values.keys()), 
@@ -50,7 +50,7 @@ class SetOperator(InsertValuesOperator):
 	def _prepare_value(self, val: any) -> Union[str, int]:
 		return self.VALUE.format(val) if not isinstance(val, int) else val
 
-	def __str__(self) -> str:
+	def to_str(self) -> str:
 		separator = ","
 		return self.CMD.format(separator.join(self.COLUMN.format(col, self._prepare_value(val)) for col, val in self._values.items()))
 

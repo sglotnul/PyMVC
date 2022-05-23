@@ -12,14 +12,6 @@ class CreateTableOperation(Operation):
 		state.state[self._table] = self._meta
 
 class DeleteTableOperation(Operation):
-	@staticmethod
-	def apply_to_state(state: dict, definition: dict):
-		table = definition.pop("table")
-		try:
-			del state[table]
-		except KeyError:
-			pass
-
 	def deconstruct(self) -> dict:
 		return {"table": self._table}
 
@@ -31,6 +23,9 @@ class DeleteTableOperation(Operation):
 			del state.state[self._table]
 		except KeyError:
 			pass
+
+	def __bool__(self) -> bool:
+		return bool(self._table)
 
 FIELDS_DICT = "fields"
 
@@ -49,7 +44,7 @@ class DeleteFieldSubOperation(SubOperation):
 		try:
 			del state.state[self._table][FIELDS_DICT][self._field]
 		except KeyError:
-			pass
+			print('errrr')
 
 class ChangeFieldSubOperation(CreateFieldSubOperation):
 	def apply(self, schema: TableSchemaEngine):

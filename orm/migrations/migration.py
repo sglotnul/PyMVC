@@ -11,13 +11,7 @@ OPERATION_CLS = {
 }
 
 class Migration:
-	@staticmethod
-	def apply_to_state(state: dict, migration_inner: dict):
-		for operation_type, inner in migration_inner.items():
-			for operation in inner:
-				OPERATION_CLS[operation_type].apply_to_state(state, operation)
-				
-	def __init__(self, entry: dict={}):
+	def __init__(self):
 		self._operations = {}
 		
 	def from_entry(self, entry: dict):
@@ -59,22 +53,20 @@ class Migration:
 	def to_json(self) -> str:
 		deconstructed_migration = {}
 		for operation_type, operations in self._operations.items():
-			deconstructed_migration[operation_type] = list(map(lambda o: o.deconstruct(), filter(lambda o: o, operations)))
+			deconstructed_migration[operation_type] = list(map(lambda o: o.deconstruct(), operations))
 		return json.dumps(deconstructed_migration)
 
 	def apply(self, executor: object):
 		schema = executor.schema_engine()
 		for operation_list in self._operations.values():
 			for operation in operation_list:
-				if operation:
-					operation.apply(schema)
-		self._execute(executor, str(schema))
+				operation.apply(schema)
+		self._execute(executor, schema.to_str())
 
 	def apply_to_state(self, state: object):
 		for operation_list in self._operations.values():
 			for operation in operation_list:
-				if operation:
-					operation.apply_to_state(state)
+				operation.apply_to_state(state)
 
 	def __bool__(self) -> bool:
 		return bool(self._operations)

@@ -13,7 +13,7 @@ class SelectOperator(Operator):
 		self._table = table
 		self._fields = fields or tuple(self.default)
 
-	def __str__(self) -> str:
+	def to_str(self) -> str:
 		separator = ","
 		return self.CMD.format(
 			fields = separator.join(self._fields),
@@ -34,7 +34,7 @@ class WhereOperator(Operator):
 	def set(self, params: dict):
 		self._params.extend(params.items())
 
-	def __str__(self) -> str:
+	def to_str(self) -> str:
 		return self.CMD.format(self.AND.join((self.PARAM.format(key, value) for key, value in self._params)))
 
 	def __bool__(self) -> bool:
@@ -58,7 +58,7 @@ class OrderOperator(Operator):
 			self._field = field[1:]
 			self._ordering = self.descending
 
-	def __str__(self) -> str:
+	def to_str(self) -> str:
 		return self.CMD.format(
 			field=self._field,
 			ordering=self._ordering
@@ -76,7 +76,7 @@ class LimitOperator(Operator):
 	def set(self, limit: int):
 		self._limit = limit
 
-	def __str__(self) -> str:
+	def to_str(self) -> str:
 		return self.CMD.format(self._limit)
 
 	def __bool__(self) -> bool:

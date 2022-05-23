@@ -23,7 +23,7 @@ class ForeignKey(IntegerField):
 		super().__init__(**kwargs)
 		if not isinstance(model, object):
 			raise Exception("argument must be an Model class instance")
-		self._model = model.__meta__['name']
+		self._model = model.meta['name']
 
 	def deconstruct(self) -> dict:
 		meta = super().deconstruct()

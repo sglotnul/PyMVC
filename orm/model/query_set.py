@@ -8,14 +8,14 @@ class QuerySet:
 		
 		self._model = model_cls
 
-		self._query = executor.query(self._model.__meta__['name'])
+		self._query = executor.query(self._model.meta['name'])
 
 	def _zip_model(self, cols: iter, row: iter) -> object:
 		fields = dict(zip(cols, row))
 		return self._model(**fields)
 
 	def _get_data(self) -> iter:
-		return self._executor(str(self._query))
+		return self._executor(self._query.to_str())
 
 	def _fetch(self) -> List[object]:
 		model_list = []

@@ -1,8 +1,9 @@
-from mymvc2.orm.db.schema import SchemaEngine, BaseTableSchemaEngine
-from mymvc2.orm.db.sqlite.schema import operators
-from mymvc2.orm.db.schema.operators import operator_delegating_metod
+from mymvc2.orm.db.schema import SchemaEngine, TableSchemaEngine
+from mymvc2.orm.db.backends.mysql.schema.operators import CreateTableOperator, ChangeTableOperator
+from .operators import *
+from mymvc2.orm.db.schema import operator_delegating_metod
 
-class SQLiteTableSchemaEngine(BaseTableSchemaEngine):
+class SQLiteTableSchemaEngine(TableSchemaEngine):
 	def __init__(self, schema: object, table: str, fields: dict):
 		super().__init__(table, fields)
 		self._schema = schema
@@ -19,25 +20,23 @@ class SQLiteTableSchemaEngine(BaseTableSchemaEngine):
 		return self._state
 	
 	def get_schema(self) -> object:
-		return self._schema
+		return self._schema.__class__()
 	
 	def reset(self):
-		super().reset()
-
 		self._state = self._fields
 
-		self._operators['drop'] = operators.SQLiteDropOperator(self)
-		self._operators['add'] = operators.SQliteAddOperator(self)
-		self._operators['add_fk'] = operators.SQliteAddForeignKeyOperator(self)
-		self._operators['rename_to'] = operators.SQliteRenameOperator(self)
+		self._operators['drop'] = SQLiteDropOperator(self)
+		self._operators['add'] = SQliteAddOperator(self)
+		self._operators['add_fk'] = SQliteAddForeignKeyOperator(self)
+		self._operators['rename_to'] = SQliteRenameOperator(self)
 	
-	def __str__(self) -> str:
+	def to_str(self) -> str:
 		separator = "\n"
 		applied_operators = []
 		for operator in self._operators.values():
 			if operator:
 				operator.mutate_disposer_state()
-				applied_operators.append(str(operator))
+				applied_operators.append(operator.to_str())
 		return separator.join(applied_operators)
 
 class SQLiteSchemaEngine(SchemaEngine):
@@ -47,6 +46,6 @@ class SQLiteSchemaEngine(SchemaEngine):
 		return table_schema_engine
 
 	def reset(self):
-		super().reset()
-		
-		self._operators['delete_table'] = operators.SQliteDeleteTableOperation()
+		self._operators['delete_table'] = SQliteDeleteTableOperation()
+		self._operators['create_table'] = CreateTableOperator()
+		self._operators['alter_table'] = ChangeTableOperator()

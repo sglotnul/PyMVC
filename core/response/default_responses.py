@@ -1,4 +1,4 @@
-from mymvc2.core.response import Response
+from . import Response
 
 class NotFound(Response):
 	def __init__(self):

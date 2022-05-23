@@ -1,6 +1,6 @@
 import sqlite3
 from mymvc2.orm.db.executor import BaseExecutor
-from mymvc2.orm.db.sqlite.schema import SQLiteSchemaEngine
+from .schema import SQLiteSchemaEngine
 
 class SQLiteExecutor(BaseExecutor):
 	schema_engine = SQLiteSchemaEngine
