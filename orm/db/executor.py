@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
-from mymvc2.orm.db.schema import SchemaEngine
-from mymvc2.orm.db.query import Query
-from mymvc2.orm.db.entries import DataEngine
+from .schema import SchemaEngine
+from .query import Query
+from .entries import DataEngine
 
 class BaseExecutor(ABC):
 	schema_engine = SchemaEngine

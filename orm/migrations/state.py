@@ -1,11 +1,30 @@
+from typing import Iterable
 from mymvc2.apps.app import App
 from .migration import Migration
 from .operations import *
 
-class StateComparer:
-	def __init__(self, disposer: object): 
-		self.state = disposer.state
-		self.app = disposer.app
+def deconstruct_model(model: type) -> dict:
+	return {
+		'fields': dict(map(lambda f: (f.name, f.deconstruct()), model.meta['all_fields'])),
+	}
+
+class State:
+	def __init__(self):
+		self.state = {}
+
+	@classmethod
+	def from_app(cls, app: App) -> object:
+		instance = cls()
+		for model in app.get_models():
+			instance.state[model.meta['name']] = deconstruct_model(model)
+		return instance
+
+	@classmethod
+	def from_migrations(cls, migration_list: Iterable[Migration]) -> object:
+		instance = cls()
+		for migration in migration_list:
+			migration.apply_to_state(instance.state)
+		return instance
 
 	def _field_compare(self, get_alter_table_operation, field: str, from_field: dict, to_field: dict):
 		for param in to_field.keys():
@@ -49,22 +68,7 @@ class StateComparer:
 		for table in old_state_copy.keys():
 			migration.add_delete_table_operation(table)
 
-	def compare(self, previous_state: object) -> Migration:
+	def compare_with(self, previous_state: object) -> Migration:
 		migration = Migration()
 		self._base_compare(migration, previous_state.state, self.state)
 		return migration
-
-class State:
-	def __init__(self, app: App):
-		self.app = app
-		self.state = {}
-		self.comparer = StateComparer(self)
-
-	def build(self):
-		for model in self.app.get_models():
-			self.state[model.meta['name']] = model.deconstruct()
-
-	def mutate(self, migration_inner: dict):
-		migration = Migration()
-		migration.from_entry(migration_inner)
-		migration.apply_to_state(self)

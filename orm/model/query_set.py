@@ -3,12 +3,10 @@ from typing import List
 TABLE_INFO = "PRAGMA table_info(%s);"
 
 class QuerySet:
-	def __init__(self, model_cls: type, executor):
+	def __init__(self, model_cls: type, executor: object):
 		self._executor = executor
-		
 		self._model = model_cls
-
-		self._query = executor.query(self._model.meta['name'])
+		self._query = self._executor.query(self._model.meta['name'])
 
 	def _zip_model(self, cols: iter, row: iter) -> object:
 		fields = dict(zip(cols, row))

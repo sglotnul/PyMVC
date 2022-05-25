@@ -29,9 +29,6 @@ class TableSchemaEngine(OperatorRegistry):
 	def add_foreign_key(self, field: str, to_table: str):
 		self._operators['add_fk'].set(field, to_table)
 
-	def copy(self) -> object:
-		return self.__class__(self._table, self._fields)
-
 	def reset(self):
 		self._operators['drop'] = Operator()
 		self._operators['add'] = Operator()

@@ -8,8 +8,8 @@ class CreateTableOperation(Operation):
 			raise Exception("unable to create an empty table")
 		schema.create_table(self._table, self._meta["fields"])
 
-	def apply_to_state(self, state: object):
-		state.state[self._table] = self._meta
+	def apply_to_state(self, state_dict: dict):
+		state_dict[self._table] = self._meta
 
 class DeleteTableOperation(Operation):
 	def deconstruct(self) -> dict:
@@ -18,9 +18,9 @@ class DeleteTableOperation(Operation):
 	def apply(self, schema: SchemaEngine):
 		schema.delete_table(self._table)
 
-	def apply_to_state(self, state: object):
+	def apply_to_state(self, state_dict: dict):
 		try:
-			del state.state[self._table]
+			del state_dict[self._table]
 		except KeyError:
 			pass
 
@@ -33,18 +33,18 @@ class CreateFieldSubOperation(SubOperation):
 	def apply(self, schema: TableSchemaEngine):
 		schema.add(self._field, self._meta)
 
-	def apply_to_state(self, state: object):
-		state.state[self._table][FIELDS_DICT][self._field] = self._meta
+	def apply_to_state(self, state_dict: dict):
+		state_dict[self._table][FIELDS_DICT][self._field] = self._meta
 
 class DeleteFieldSubOperation(SubOperation):
 	def apply(self, schema: TableSchemaEngine):
 		schema.drop(self._field)
 
-	def apply_to_state(self, state: object):
+	def apply_to_state(self, state_dict: dict):
 		try:
-			del state.state[self._table][FIELDS_DICT][self._field]
+			del state_dict[self._table][FIELDS_DICT][self._field]
 		except KeyError:
-			print('errrr')
+			pass
 
 class ChangeFieldSubOperation(CreateFieldSubOperation):
 	def apply(self, schema: TableSchemaEngine):
@@ -55,11 +55,6 @@ SUBOPERATION_CLS = {
 	"DELETE_FIELD": DeleteFieldSubOperation,
 	"CHANGE_FIELD": ChangeFieldSubOperation,
 }
-
-def get_suboperation_cls(operation_type: str) -> type:
-	operation_cls = SUBOPERATION_CLS.get(operation_type)
-	assert operation_cls, f"{operation_type} is unregistered operation"
-	return operation_cls
 
 class AlterTableOperation(Operation):	
 	def __init__(self, table: str, meta: dict={}):
@@ -104,10 +99,10 @@ class AlterTableOperation(Operation):
 			for suboperation in suboperations:
 				suboperation.apply(schema)
 
-	def apply_to_state(self, state: object):
+	def apply_to_state(self, state_dict: dict):
 		for suboperation_list in self._suboperations.values():
 			for suboperation in suboperation_list:
-				suboperation.apply_to_state(state)
+				suboperation.apply_to_state(state_dict)
 
 	def deconstruct(self) -> dict:
 		data = super().deconstruct()

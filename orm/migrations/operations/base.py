@@ -5,16 +5,18 @@ class Operation(ABC):
 	def __init__(self, table: str, meta: dict={}):
 		self._table = table
 		self._meta = meta
-
-	def from_entry(self, entry: dict):
-		raise NotImplementedError()
+	
+	@classmethod 
+	def from_entry(cls, entry: dict) -> object:
+		table = entry.pop("table")
+		return cls(table, entry)
 
 	@abstractmethod
 	def apply(self, schema: SchemaEngine):
 		raise NotImplementedError()
 
 	@abstractmethod
-	def apply_to_state(self, state: object):
+	def apply_to_state(self, state_dict: dict):
 		raise NotImplementedError()
 
 	def deconstruct(self) -> dict:

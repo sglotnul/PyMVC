@@ -6,7 +6,6 @@ from .operators import *
 class DataOperatorRegistry(OperatorRegistry):
 	def __init__(self, table: str):
 		self._table = table
-
 		super().__init__()
 
 	def to_str(self) -> str:

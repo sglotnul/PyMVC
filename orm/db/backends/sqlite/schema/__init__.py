@@ -24,7 +24,6 @@ class SQLiteTableSchemaEngine(TableSchemaEngine):
 	
 	def reset(self):
 		self._state = self._fields
-
 		self._operators['drop'] = SQLiteDropOperator(self)
 		self._operators['add'] = SQliteAddOperator(self)
 		self._operators['add_fk'] = SQliteAddForeignKeyOperator(self)

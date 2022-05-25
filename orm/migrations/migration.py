@@ -14,14 +14,15 @@ class Migration:
 	def __init__(self):
 		self._operations = {}
 		
-	def from_entry(self, entry: dict):
+	@classmethod
+	def from_entry(cls, entry: dict) -> object:
+		migration = cls()
 		for operation_type, inner in entry.items():
 			operation_cls = OPERATION_CLS.get(operation_type, None)
 			assert operation_cls, "invalid operation type"
-			
 			for operation_definition in inner:
-				table = operation_definition.pop("table")
-				self._add_operation(operation_type, operation_cls(table, operation_definition))
+				migration._add_operation(operation_type, operation_cls.from_entry(operation_definition))
+		return migration
 	
 	def _get_same_operations_list(self, operation_type: str) -> List[Operation]:
 		same_operations_list = self._operations.get(operation_type)
@@ -50,23 +51,27 @@ class Migration:
 		operation_cls = OPERATION_CLS['CHANGE_TABLE']
 		return self._add_operation("CHANGE_TABLE", operation_cls(table, meta))
 
-	def to_json(self) -> str:
+	def deconstruct(self) -> dict:
 		deconstructed_migration = {}
 		for operation_type, operations in self._operations.items():
-			deconstructed_migration[operation_type] = list(map(lambda o: o.deconstruct(), operations))
-		return json.dumps(deconstructed_migration)
+			confirmed_operations = list(map(lambda o: o.deconstruct(), filter(lambda o: o, operations)))
+			if confirmed_operations:
+				deconstructed_migration[operation_type] = confirmed_operations
+		return deconstructed_migration
 
 	def apply(self, executor: object):
 		schema = executor.schema_engine()
 		for operation_list in self._operations.values():
 			for operation in operation_list:
-				operation.apply(schema)
+				if operation:
+					operation.apply(schema)
 		self._execute(executor, schema.to_str())
 
-	def apply_to_state(self, state: object):
+	def apply_to_state(self, state_dict: dict):
 		for operation_list in self._operations.values():
 			for operation in operation_list:
-				operation.apply_to_state(state)
+				if operation:
+					operation.apply_to_state(state_dict)
 
 	def __bool__(self) -> bool:
 		return bool(self._operations)

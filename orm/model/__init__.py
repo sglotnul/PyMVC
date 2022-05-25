@@ -39,10 +39,6 @@ class Model(metaclass=ModelBase):
 				raise Exception(f"{field.name} field is reqired")
 			setattr(self, field.name, val)
 			self._state[field.name] = val
-	
-	@classmethod
-	def deconstruct(cls) -> dict:
-		return {'fields': dict(map(lambda f: (f.name, f.deconstruct()), cls.meta['all_fields'])),}
 
 	def save(self):
 		cols = {}

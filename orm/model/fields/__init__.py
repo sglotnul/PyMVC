@@ -1,4 +1,4 @@
-from mymvc2.orm.model.fields.base import Field, ReadOnlyFieldMixin
+from .base import Field, ReadOnlyFieldMixin
 
 class TextField(Field):
 	sql_type = "TEXT"

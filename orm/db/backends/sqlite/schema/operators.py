@@ -78,16 +78,19 @@ class SQLiteDropOperator(SQLiteAlterTableOperator):
 		table_name = disposer.get_table_name()
 		backup_table_name = table_name + "_backup"
 
+		schema = disposer.get_schema()
 		backup_fields = disposer.get_state()
 
 		separator = "\n"
 
-		return separator.join((
-			disposer.get_schema().create_table(backup_table_name, backup_fields).to_str(),
-			DataEngine().insert(backup_table_name).insert_from(table_name, tuple(backup_fields.keys())).to_str(),
-			disposer.get_schema().delete_table(table_name).to_str(),
-			disposer.__class__(disposer.get_schema(), backup_table_name, backup_fields).rename_to(table_name).to_str(),
-		))
+		query = schema.create_table(backup_table_name, backup_fields).to_str() + separator
+		schema.reset()
+		query += DataEngine().insert(backup_table_name).insert_from(table_name, tuple(backup_fields.keys())).to_str() + separator
+		query += schema.delete_table(table_name).to_str() + separator
+		schema.reset()
+		query += disposer.__class__(schema, backup_table_name, backup_fields).rename_to(table_name).to_str()
+
+		return query
 
 	def __bool__(self) -> bool:
 		return bool(self._cols)
@@ -125,5 +128,3 @@ class SQliteRenameOperator(SQLiteAlterTableOperator):
 
 	def __bool__(self) -> bool:
 		return bool(self._name)
-
-
