@@ -1,54 +1,82 @@
 from typing import List
-from mymvc2.orm.migrations.operations.base import Operation, SubOperation
+from mymvc2.orm.migrations.operations.base import Operation
 from mymvc2.orm.db.schema import SchemaEngine, TableSchemaEngine
 
 class CreateTableOperation(Operation):
-	def apply(self, schema: SchemaEngine):
-		if self._meta is None:
-			raise Exception("unable to create an empty table")
-		schema.create_table(self._table, self._meta["fields"])
+	def __init__(self, *args, fields: dict=None, **kwargs):
+		super().__init__(*args, **kwargs)
+		self._fields = fields if fields is not None else {}
 
-	def apply_to_state(self, state_dict: dict):
-		state_dict[self._table] = self._meta
+	def apply(self, schema: SchemaEngine):
+		schema.create_table(self._table, self._fields)
+
+	def apply_to_state(self, state: object):
+		state.set_model(self._table, self._fields, self._meta)
+
+	def deconstruct(self) -> dict:
+		data = super().deconstruct()
+		data['fields'] = self._fields
+		data.update(self._meta)
+		return data
 
 class DeleteTableOperation(Operation):
-	def deconstruct(self) -> dict:
-		return {"table": self._table}
-
 	def apply(self, schema: SchemaEngine):
 		schema.delete_table(self._table)
 
-	def apply_to_state(self, state_dict: dict):
-		try:
-			del state_dict[self._table]
-		except KeyError:
-			pass
-
-	def __bool__(self) -> bool:
-		return bool(self._table)
+	def apply_to_state(self, state: object):
+		state.del_model(self._table)
 
 FIELDS_DICT = "fields"
 
-class CreateFieldSubOperation(SubOperation):
-	def apply(self, schema: TableSchemaEngine):
-		schema.add(self._field, self._meta)
+class SubOperation(Operation):
+	def __init__(self, table: str, field: str, **meta):
+		super().__init__(table, **meta)
+		self._field = field
 
-	def apply_to_state(self, state_dict: dict):
-		state_dict[self._table][FIELDS_DICT][self._field] = self._meta
+	def deconstruct(self) -> dict:
+		return {"field": self._field}
+
+	def __bool__(self) -> bool:
+		return bool(super().__bool__() and self._field)
+
+class CreateFieldSubOperation(SubOperation):
+	def __init__(self, *args, data_type: str=None, default: any=None, null: bool=False, **meta):
+		super().__init__(*args, **meta)
+		self._data_type = data_type
+		assert self._data_type is not None
+		self._default = default
+		self._null = null
+
+	def get_data(self) -> dict:
+		data = {
+			'data_type': self._data_type,
+			'default': self._default,
+			'null': self._null,
+		}
+		data.update(self._meta)
+		return data
+
+	def apply(self, schema: TableSchemaEngine):
+		schema.add(self._field, self.get_data())
+
+	def apply_to_state(self, state: object):
+		state.set_field(self._field, self._data_type, self._default, self._null, self._meta)
+
+	def deconstruct(self) -> dict:
+		data = super().deconstruct()
+		data.update(self.get_data())
+		return data
 
 class DeleteFieldSubOperation(SubOperation):
 	def apply(self, schema: TableSchemaEngine):
 		schema.drop(self._field)
 
-	def apply_to_state(self, state_dict: dict):
-		try:
-			del state_dict[self._table][FIELDS_DICT][self._field]
-		except KeyError:
-			pass
+	def apply_to_state(self, state: object):
+		state.del_field(self._field)
 
 class ChangeFieldSubOperation(CreateFieldSubOperation):
 	def apply(self, schema: TableSchemaEngine):
-		schema.alter(self._field, self._meta)
+		schema.alter(self._field, self.get_data())
 
 SUBOPERATION_CLS = {
 	"CREATE_FIELD": CreateFieldSubOperation,
@@ -57,18 +85,17 @@ SUBOPERATION_CLS = {
 }
 
 class AlterTableOperation(Operation):	
-	def __init__(self, table: str, meta: dict={}):
+	def __init__(self, *args, fields=None, **kwargs):
+		super().__init__(*args, **kwargs)
+		self._fields = fields or {}
 		self._suboperations = {}
 
-		for suboperation_type, inner in meta.pop('suboperations', {}).items():
-			suboperation_cls = SUBOPERATION_CLS.get(suboperation_type, None)
-			assert suboperation_cls, "invalid suboperation type"
-
-			for suboperation_definition in inner:
+		for suboperation_type, suboperation_list in self._meta.items():
+			if SUBOPERATION_CLS.get(suboperation_type) is None:
+				continue
+			for suboperation_definition in suboperation_list:
 				field = suboperation_definition.pop("field")
-				self._add_suboperation(suboperation_type, suboperation_cls(table, field, suboperation_definition))
-				
-		super().__init__(table, meta)
+				self._add_suboperation(suboperation_type, field, **suboperation_definition)
 
 	def _get_same_suboperations_list(self, suboperation_type: str) -> List[SubOperation]:
 		same_suboperations_list = self._suboperations.get(suboperation_type)
@@ -77,38 +104,37 @@ class AlterTableOperation(Operation):
 			self._suboperations[suboperation_type] = same_suboperations_list
 		return same_suboperations_list
 
-	def _add_suboperation(self, suboperation_type: str, suboperation: Operation):
+	def _add_suboperation(self, suboperation_type: str, field: str, **kwargs):
+		suboperation_cls = SUBOPERATION_CLS[suboperation_type]
 		same_suboperation_list = self._get_same_suboperations_list(suboperation_type)
-		same_suboperation_list.append(suboperation)
+		same_suboperation_list.append(suboperation_cls(self._table, field, **kwargs))
 
-	def add_create_field_suboperation(self, field: str, meta: dict):
-		suboperation_cls = SUBOPERATION_CLS['CREATE_FIELD']
-		self._add_suboperation("CREATE_FIELD", suboperation_cls(self._table, field, meta))
+	def add_create_field_suboperation(self, field: str, data: dict):
+		self._add_suboperation("CREATE_FIELD", field, **data)
 
 	def add_delete_field_suboperation(self, field: str):
-		suboperation_cls = SUBOPERATION_CLS['DELETE_FIELD']
-		self._add_suboperation("DELETE_FIELD", suboperation_cls(self._table, field))
+		self._add_suboperation("DELETE_FIELD", field)
 
-	def add_change_field_suboperation(self, field: str, meta: dict):
-		suboperation_cls = SUBOPERATION_CLS['CHANGE_FIELD']
-		self._add_suboperation("CHANGE_FIELD", suboperation_cls(self._table, field, meta))
+	def add_change_field_suboperation(self, field: str, data: dict):
+		self._add_suboperation("CHANGE_FIELD", field, **data)
 
 	def apply(self, schema: SchemaEngine):
-		schema = schema.alter_table(self._table, self._meta['fields'])
+		schema = schema.alter_table(self._table, self._fields)
 		for suboperations in self._suboperations.values():
 			for suboperation in suboperations:
 				suboperation.apply(schema)
 
-	def apply_to_state(self, state_dict: dict):
+	def apply_to_state(self, state: object):
 		for suboperation_list in self._suboperations.values():
 			for suboperation in suboperation_list:
-				suboperation.apply_to_state(state_dict)
+				suboperation.apply_to_state(state.models[self._table])
 
 	def deconstruct(self) -> dict:
 		data = super().deconstruct()
-		data['suboperations'] = {}
 		for suboperation_type, suboperations in self._suboperations.items():
-			data['suboperations'][suboperation_type] = list(map(lambda suo: suo.deconstruct(), suboperations))
+			suboperation_list = list(map(lambda suo: suo.deconstruct(), suboperations))
+			if suboperation_list:
+				data[suboperation_type] = suboperation_list
 		return data
 
 	def __bool__(self) -> bool:

@@ -1,74 +1,66 @@
+from dataclasses import asdict, dataclass, InitVar, field
 from typing import Iterable
 from mymvc2.apps.app import App
 from .migration import Migration
-from .operations import *
 
-def deconstruct_model(model: type) -> dict:
-	return {
-		'fields': dict(map(lambda f: (f.name, f.deconstruct()), model.meta['all_fields'])),
-	}
+@dataclass
+class DefaultState:
+	def __post_init__(self, meta: dict=None):
+		self._meta = meta or {}
+
+	def __getattr__(self, attr: str) -> any:
+		meta_value = self._meta.get(attr, None)
+		if meta_value is None:
+			raise AttributeError(f"{attr} is not defined")
+		return meta_value
+
+	def __eq__(self, other: object) -> bool:
+		return self.asdict() == other.asdict()
+
+	def asdict(self) -> dict:
+		data = asdict(self)
+		data.update(self._meta)
+		return data
+
+@dataclass	
+class FieldState(DefaultState):
+	data_type: str
+	default: any = field(default=None)
+	null: bool = field(default=False)
+	meta: InitVar[dict] = None
+
+@dataclass
+class ModelState(DefaultState):
+	fields: dict = field(init=False)
+	raw_fields: InitVar[dict] = None
+	meta: InitVar[dict] = None
+
+	def __post_init__(self, raw_fields: dict=None, meta: dict=None):
+		super().__post_init__(meta)
+		self.fields = {}
+		for field, field_data in raw_fields.items():
+			self.set_field(field, field_data.pop('data_type'), field_data.pop('default'), field_data.pop('null'), field_data)
+
+	def set_field(self, field: str, data_type: str, default: any, null: bool, meta: dict=None):
+		self.fields[field] = FieldState(data_type, default, null, meta)
+
+	def del_field(self, field: str):
+		del self.fields[field]
 
 class State:
-	def __init__(self):
-		self.state = {}
+	def __init__(self, *, migrations: Iterable[Migration]=(), app: App=None):
+		self.models = {}
 
-	@classmethod
-	def from_app(cls, app: App) -> object:
-		instance = cls()
-		for model in app.get_models():
-			instance.state[model.meta['name']] = deconstruct_model(model)
-		return instance
+		for migration in migrations:
+			migration.apply_to_state(self)
 
-	@classmethod
-	def from_migrations(cls, migration_list: Iterable[Migration]) -> object:
-		instance = cls()
-		for migration in migration_list:
-			migration.apply_to_state(instance.state)
-		return instance
+		if app:
+			for model in app.get_models():
+				fields = dict(map(lambda f: (f.name, f.deconstruct()), model.meta.fields))
+				self.set_model(model.meta.name, fields)
 
-	def _field_compare(self, get_alter_table_operation, field: str, from_field: dict, to_field: dict):
-		for param in to_field.keys():
-			if from_field.get(param) != to_field.get(param):
-				get_alter_table_operation().add_change_field_suboperation(field, to_field)
-				break
+	def set_model(self, model: str, fields: dict, meta: dict=None):
+		self.models[model] = ModelState(fields, meta)
 
-	def _deep_compare(self, migration: Migration, table: str, from_meta: dict, to_meta: dict):
-		from_fields = from_meta['fields']
-		to_fields = to_meta['fields']
-
-		old_fields_copy = from_fields.copy()
-		alter_operation = None
-
-		def get_alter_table_operation() -> AlterTableOperation:
-			nonlocal alter_operation, migration
-			if alter_operation is None:
-				alter_operation = migration.add_change_table_operation(table, from_meta)
-			return alter_operation
-
-		for field, definition in to_fields.items():
-			try:
-				del old_fields_copy[field]
-			except KeyError:
-				get_alter_table_operation().add_create_field_suboperation(field, definition)
-			else:
-				self._field_compare(get_alter_table_operation, field, from_fields[field], to_fields[field])
-		for field in old_fields_copy.keys():
-			get_alter_table_operation().add_delete_field_suboperation(field)
-
-	def _base_compare(self, migration: Migration, from_state: dict, to_state: dict):
-		old_state_copy = from_state.copy()
-		for table, meta in to_state.items():
-			try:
-				del old_state_copy[table]
-			except KeyError:
-				migration.add_create_table_operation(table, meta)
-			else:
-				old_meta = from_state[table]
-				self._deep_compare(migration, table, old_meta, meta)
-		for table in old_state_copy.keys():
-			migration.add_delete_table_operation(table)
-
-	def compare_with(self, previous_state: object) -> Migration:
-		migration = Migration()
-		self._base_compare(migration, previous_state.state, self.state)
-		return migration
+	def del_model(self, model: str):
+		del self.models[model]

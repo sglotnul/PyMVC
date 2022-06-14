@@ -26,8 +26,8 @@ class Manager:
 		return cur.lastrowid
 	
 	def create(self, **cols):
-		inserter = self._data_engine.insert(self._model.meta['name'])
-		for field in self._model.meta['all_fields']:
+		inserter = self._data_engine.insert(self._model.name)
+		for field in self._model.meta.fields:
 			if not field.autoincrement:
 				val = cols.get(field.name, None)
 				if val is None:
@@ -37,10 +37,10 @@ class Manager:
 		return self.get(id=lastrowid)
 
 	def remove(self, **params):
-		self._executor(self._data_engine.remove(self._model.meta['name']).where(**params).to_str())
+		self._executor(self._data_engine.remove(self._model.meta.name).where(**params).to_str())
 
 	def update(self, cols: dict, **params):
-		updater = self._data_engine.update(self._model.meta['name']).where(**params)
+		updater = self._data_engine.update(self._model.meta.name).where(**params)
 		for col, val in cols.items():
 			updater.set(col, val)
 		self._executor(updater.to_str())
