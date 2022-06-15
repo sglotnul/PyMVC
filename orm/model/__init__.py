@@ -3,7 +3,7 @@ from typing import Tuple
 from inspect import getmembers
 from .fields import PrimaryKeyField
 from .manager import Manager
-from mymvc2.orm.model.fields.base import Field
+from pafmvc.orm.model.fields.base import Field
 
 @dataclass
 class ModelMeta:
@@ -44,7 +44,7 @@ class Model(metaclass=ModelBase):
 			self._state.update(cols)
 			self.__class__.manager.update(cols, id=self.id)
 	
-	def reset(self):
+	def __operators__(self):
 		self.__dict__.update(self._state)
 
 	def remove(self):

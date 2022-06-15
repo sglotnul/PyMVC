@@ -22,10 +22,10 @@ class Operator(ABC):
 class OperatorRegistry(ABC):
 	def __init__(self):
 		self._operators = OrderedDict()
-		self.reset()
+		self.__operators__()
 
 	@abstractmethod
-	def reset(self):
+	def __operators__(self):
 		raise NotImplementedError()
 
 	def to_str(self) -> str:

@@ -1,8 +1,8 @@
 import inspect, os
 from typing import Tuple
 from importlib import import_module
-from mymvc2.conf.settings import BASE_DIR
-from mymvc2.orm.model import Model
+from pafmvc.conf.settings import BASE_DIR
+from pafmvc.orm.model import Model
 
 MODELS_MODULE = "models"
 URLS_MODULE = "urls"

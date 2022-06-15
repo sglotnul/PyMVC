@@ -1,5 +1,5 @@
 from typing import Union
-from mymvc2.orm.db.operator import Operator
+from pafmvc.orm.db.operator import Operator
 
 class InsertIntoOperator(Operator):
 	CMD = "INSERT INTO {}"

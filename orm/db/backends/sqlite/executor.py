@@ -1,5 +1,5 @@
 import sqlite3
-from mymvc2.orm.db.executor import BaseExecutor
+from pafmvc.orm.db.executor import BaseExecutor
 from .schema import SQLiteSchemaEngine
 
 class SQLiteExecutor(BaseExecutor):
@@ -26,6 +26,7 @@ class SQLiteExecutor(BaseExecutor):
 	def __call__(self, query: str, *, script=False) -> sqlite3.Cursor:
 		if not query:
 			return
+		print(query)
 		execute = self._executor.execute
 		if script:
 			query = self._prepare_query(query)

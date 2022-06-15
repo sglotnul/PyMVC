@@ -1,5 +1,5 @@
-from mymvc2.orm.db.connection import connect
-from mymvc2.orm.model.query_set import QuerySet
+from pafmvc.orm.db.connection import connect
+from pafmvc.orm.model.query_set import QuerySet
 
 class Manager:
 	def __init__(self, model_cls: type):

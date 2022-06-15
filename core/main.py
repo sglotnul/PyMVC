@@ -1,7 +1,7 @@
-from mymvc2.conf.settings import DEBUG
-from mymvc2.apps.registry import apps
-from mymvc2.view import View
-from mymvc2.core.response import Response
+from pafmvc.conf.settings import DEBUG
+from pafmvc.apps.registry import apps
+from pafmvc.view import View
+from pafmvc.core.response import Response
 from request import Request
 from response import default_responses, exceptions
 

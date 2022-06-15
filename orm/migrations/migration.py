@@ -1,6 +1,6 @@
 from typing import List
-from mymvc2.orm.migrations.operations.base import Operation
-from mymvc2.orm.migrations import operations
+from pafmvc.orm.migrations.operations.base import Operation
+from pafmvc.orm.migrations import operations
 
 #Преставляет собой одну миграцию. Содержит информацию обо все примененных в ней операциях
 OPERATION_CLS = {

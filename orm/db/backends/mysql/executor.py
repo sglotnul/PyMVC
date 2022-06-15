@@ -1,4 +1,4 @@
-from mymvc2.orm.db.executor import BaseExecutor
+from pafmvc.orm.db.executor import BaseExecutor
 from .schema import MySqlSchemaEngine
 
 class SQLiteExecutor(BaseExecutor):

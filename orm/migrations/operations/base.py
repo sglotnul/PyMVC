@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from mymvc2.orm.db.schema import SchemaEngine
+from pafmvc.orm.db.schema import SchemaEngine
 
 class Operation(ABC):
 	def __init__(self, table: str, **meta):

@@ -1,6 +1,6 @@
 from typing import Tuple
-from mymvc2.orm.db.operator import OperatorRegistry, operator_delegating_metod
-from mymvc2.orm.db.query.operators import WhereOperator, SelectOperator
+from pafmvc.orm.db.operator import OperatorRegistry, operator_delegating_metod
+from pafmvc.orm.db.query.operators import WhereOperator, SelectOperator
 from .operators import *
 
 class DataOperatorRegistry(OperatorRegistry):
@@ -21,7 +21,7 @@ class Inserter(DataOperatorRegistry):
 	def insert(self, field: str, value: any):
 		self._operators['values'].set(field, value)
 
-	def reset(self):
+	def __operators__(self):
 		self._operators['insert'] = InsertIntoOperator()
 		self._operators['insert'].set(self._table)
 		self._operators['from'] = SelectOperator()
@@ -32,7 +32,7 @@ class Remover(DataOperatorRegistry):
 	def where(self, *args, **params):
 		self._operators['where'].set(params)
 
-	def reset(self):
+	def __operators__(self):
 		self._operators['delete'] = DeleteFromOperator()
 		self._operators['delete'].set(self._table)
 		self._operators['where'] = WhereOperator()
@@ -46,7 +46,7 @@ class Updater(DataOperatorRegistry):
 	def where(self, *args, **params):
 		self._operators['where'].set(params)
 
-	def reset(self):
+	def __operators__(self):
 		self._operators['update'] = UpdateOperator()
 		self._operators['update'].set(self._table)
 		self._operators['set'] = SetOperator()

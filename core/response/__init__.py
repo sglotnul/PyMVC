@@ -1,6 +1,6 @@
 import os
 from typing import Tuple
-from mymvc2.conf.settings import TEMPLATE_PATH
+from pafmvc.conf.settings import TEMPLATE_PATH
 
 DEFAULT_HEADERS = {
 	"Content-Type": "text/html; charset=utf-8",

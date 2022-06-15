@@ -1,5 +1,5 @@
 from typing import Tuple
-from mymvc2.orm.db.operator import OperatorRegistry, operator_delegating_metod
+from pafmvc.orm.db.operator import OperatorRegistry, operator_delegating_metod
 from .operators import *
 
 class Query(OperatorRegistry):
@@ -22,7 +22,7 @@ class Query(OperatorRegistry):
 	def set_limit(self, limit: int):
 		self._operators['limit'].set(limit)
 
-	def reset(self):
+	def __operators__(self):
 		self._operators['select'] = SelectOperator()
 		self._operators['select'].set(self._table, self._fields)
 		self._operators['where'] = WhereOperator()

@@ -1,5 +1,5 @@
 from typing import Tuple
-from mymvc2.orm.db.operator import Operator
+from pafmvc.orm.db.operator import Operator
 
 class SelectOperator(Operator):
 	CMD = "SELECT {fields} FROM {table}"

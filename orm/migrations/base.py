@@ -2,8 +2,8 @@ import os, yaml
 from typing import Iterable, List
 from .state import State
 from .migration import Migration
-from mymvc2.apps.app import App
-from mymvc2.orm.db.executor import BaseExecutor
+from pafmvc.apps.app import App
+from pafmvc.orm.db.executor import BaseExecutor
 from .operations import *
 
 MIGRATION_FOLDER_NAME = "migrations"

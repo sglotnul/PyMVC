@@ -1,4 +1,4 @@
-from mymvc2.core.response.exceptions import ResponseException
+from pafmvc.core.response.exceptions import ResponseException
 
 class View:
 	def get(self, request: object):

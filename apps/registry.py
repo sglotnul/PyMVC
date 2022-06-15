@@ -1,6 +1,6 @@
 import inspect, sys
 from importlib import import_module
-from mymvc2.conf.settings import REGISTERED_APPS, BASE_DIR
+from pafmvc.conf.settings import REGISTERED_APPS, BASE_DIR
 from .app import App, get_is_exactly_subclass_checker
 
 separator = "."
@@ -23,7 +23,7 @@ class AppRegistry:
 				if others:
 					raise Exception("more than one app config found")
 				_, config = conf
-		except ModuleNotFoundError:
+		except ModuleNotFoundError as e:
 			raise ModuleNotFoundError(f"{module} app not found")
 		return config(module)
 		

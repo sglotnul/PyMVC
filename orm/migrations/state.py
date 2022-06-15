@@ -1,6 +1,6 @@
 from dataclasses import asdict, dataclass, InitVar, field
 from typing import Iterable
-from mymvc2.apps.app import App
+from pafmvc.apps.app import App
 from .migration import Migration
 
 @dataclass
@@ -46,6 +46,14 @@ class ModelState(DefaultState):
 
 	def del_field(self, field: str):
 		del self.fields[field]
+
+	def asdict(self) -> dict:
+		fields = {}
+		data = {'fields': fields}
+		for field, f_state in self.fields.items():
+			fields[field] = f_state.asdict()
+		data.update(self._meta)
+		return data
 
 class State:
 	def __init__(self, *, migrations: Iterable[Migration]=(), app: App=None):
