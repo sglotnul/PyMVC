@@ -53,7 +53,7 @@ class MySQLSchemaEngine(SchemaEngine):
 	primary_key_schema = MySQLPrimaryKeySchema
 		
 	def alter_table(self, table: str, fields: Iterable[FieldSchema]) -> MySQLTableSchemaEngine:
-		table_schema_engine = MySQLTableSchemaEngine(table, fields)
+		table_schema_engine = MySQLTableSchemaEngine(self, table, fields)
 		self._operators['alter_table'].set(table_schema_engine)
 		return table_schema_engine
 

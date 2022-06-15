@@ -104,8 +104,6 @@ class SQliteAddForeignKeyOperator(SQLiteDropOperator):
 	def mutate_disposer_state(self):
 		state = self._disposer.get_state()
 		for field in self._cols:
-			if not state.get(field.name):
-				raise Exception("unable to add foreign key to nonexistent column")
 			state[field.name] = field
 	
 class SQliteRenameOperator(SQLiteAlterTableOperator):

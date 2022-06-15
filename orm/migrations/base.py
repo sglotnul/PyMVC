@@ -16,7 +16,7 @@ class MigrationFileManager:
 		self._folder = path
 
 	def _get_sorted_file_list(self) -> Iterable[str]:
-		return sorted(os.listdir(self._folder))
+		return sorted(os.listdir(self._folder), key=lambda f: int(f.rpartition(".")[0]))
 
 	def _get_previous_migration_files(self) -> Iterable[str]:
 		return map(lambda filename: os.path.join(self._folder, filename), self._get_sorted_file_list())

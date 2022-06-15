@@ -2,20 +2,13 @@ from typing import List
 from pafmvc.orm.migrations.operations.base import Operation
 from pafmvc.orm.db.schema import SchemaEngine, TableSchemaEngine
 
-def get_field(schema: SchemaEngine, field: str, meta: dict):
-	if meta.get('references', None):
-		return schema.foreign_key_schema(field, meta['data_type'], meta['default'], meta['null'], meta['references'])
-	if meta.get('primary_key', None):
-		return schema.primary_key_schema(field, meta['data_type'], meta['default'], meta['null'])
-	return schema.field_schema(field, meta['data_type'], meta['default'], meta['null'])
-
 class CreateTableOperation(Operation):
 	def __init__(self, *args, fields: dict, **kwargs):
 		super().__init__(*args, **kwargs)
 		self._fields = fields if fields is not None else {}
 
 	def apply(self, schema: SchemaEngine):
-		schema.create_table(self._table, map(lambda f: get_field(schema, *f), self._fields.items()))
+		schema.create_table(self._table, map(lambda f: schema.get_field(*f), self._fields.items()))
 
 	def apply_to_state(self, state: object):
 		state.set_model(self._table, self._fields, self._meta)
@@ -55,7 +48,7 @@ class CreateFieldSubOperation(SubOperation):
 		self._null = null
 
 	def apply(self, schema: TableSchemaEngine):
-		schema.add(get_field(schema, self._field, self._get_data()))
+		schema.add(schema.get_field(self._field, self._get_data()))
 
 	def apply_to_state(self, state: object):
 		state.set_field(self._field, self._data_type, self._default, self._null, self._meta)
@@ -83,7 +76,7 @@ class DeleteFieldSubOperation(SubOperation):
 
 class ChangeFieldSubOperation(CreateFieldSubOperation):
 	def apply(self, schema: TableSchemaEngine):
-		schema.alter(get_field(schema, self._field, self._get_data()))
+		schema.alter(schema.get_field(self._field, self._get_data()))
 
 SUBOPERATION_CLS = {
 	"CREATE_FIELD": CreateFieldSubOperation,
@@ -126,7 +119,7 @@ class AlterTableOperation(Operation):
 		self._add_suboperation("CHANGE_FIELD", field, **data)
 
 	def apply(self, schema: SchemaEngine):
-		schema = schema.alter_table(self._table, map(lambda f: get_field(schema, *f), self._fields.items()))
+		schema = schema.alter_table(self._table, map(lambda f: schema.get_field(*f), self._fields.items()))
 		for suboperations in self._suboperations.values():
 			for suboperation in suboperations:
 				suboperation.apply(schema)
