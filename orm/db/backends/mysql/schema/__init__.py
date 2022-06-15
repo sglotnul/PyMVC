@@ -27,10 +27,6 @@ class MySQLPrimaryKeySchema(PrimaryKeySchema, MySQLFieldSchema):
 	pass
 
 class MySQLTableSchemaEngine(TableSchemaEngine):
-	field_schema = MySQLFieldSchema
-	foreign_key_schema = MySQLForeignKeySchema
-	primary_key_schema = MySQLPrimaryKeySchema
-
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
 		self._init_operator = AlterTable()
