@@ -10,14 +10,18 @@ OPERATION_CLS = {
 }
 
 class Migration:
-	def __init__(self, entry: dict={}):
+	def __init__(self):
 		self._operations = {}
 
+	@classmethod
+	def from_entry(cls, entry: dict) -> object:
+		instance = cls()
 		for operation_type, operations_list in entry.items():
-			assert OPERATION_CLS.get(operation_type, None), f"{operation_type} is invalid operation type"
+			operation_cls = OPERATION_CLS.get(operation_type, None)
+			assert operation_cls, f"{operation_type} is invalid operation type"
 			for operation_definition in operations_list:
-				table = operation_definition.pop('table')
-				self._add_operation(operation_type, table, **operation_definition)
+				instance._add_operation(operation_type, operation_cls.from_entry(operation_definition))
+		return instance
 	
 	def _get_same_operations_list(self, operation_type: str) -> List[Operation]:
 		same_operations_list = self._operations.get(operation_type)
@@ -26,10 +30,8 @@ class Migration:
 			self._operations[operation_type] = same_operations_list
 		return same_operations_list
 
-	def _add_operation(self, operation_type: str, table: str, **kwargs) -> Operation:
-		operation_cls = OPERATION_CLS[operation_type]
+	def _add_operation(self, operation_type: str, operation: Operation) -> Operation:
 		same_operations_list = self._get_same_operations_list(operation_type)
-		operation = operation_cls(table, **kwargs)
 		same_operations_list.append(operation)
 		return operation
 
@@ -37,13 +39,16 @@ class Migration:
 		executor(query, script=True)
 
 	def add_create_table_operation(self, table: str, data: dict) -> Operation:
-		return self._add_operation("CREATE_TABLE", table, **data)
+		cls = OPERATION_CLS["CREATE_TABLE"]
+		return self._add_operation("CREATE_TABLE", cls(table, **data))
 
 	def add_delete_table_operation(self, table: str) -> Operation:
-		return self._add_operation("DELETE_TABLE", table)
+		cls = OPERATION_CLS["DELETE_TABLE"]
+		return self._add_operation("DELETE_TABLE", cls(table))
 
 	def add_change_table_operation(self, table: str, data: dict) -> Operation:
-		return self._add_operation("CHANGE_TABLE", table, **data)
+		cls = OPERATION_CLS["CHANGE_TABLE"]
+		return self._add_operation("CHANGE_TABLE", cls(table, **data))
 
 	def deconstruct(self) -> dict:
 		deconstructed_migration = {}

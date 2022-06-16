@@ -17,12 +17,9 @@ class SQLiteTableSchemaEngine(TableSchemaEngine):
 	
 	@operator_delegating_metod
 	def alter(self, field: FieldSchema):
-		if isinstance(field, ForeignKeySchema):
-			self.add_foreign_key(field)
-		else:
-			self.drop(field.name)
-			self.add(field)
-		
+		self.drop(field.name)
+		self.add(field)
+	
 	def get_table_name(self) -> str:
 		return self._table
 

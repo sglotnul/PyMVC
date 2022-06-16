@@ -31,28 +31,25 @@ class FieldState(DefaultState):
 
 @dataclass
 class ModelState(DefaultState):
-	fields: dict = field(init=False)
-	raw_fields: InitVar[dict] = None
+	fields: dict = field(init=False, default=None)
 	meta: InitVar[dict] = None
 
-	def __post_init__(self, raw_fields: dict=None, meta: dict=None):
+	def __post_init__(self, meta: dict=None):
 		super().__post_init__(meta)
 		self.fields = {}
-		for field, field_data in raw_fields.items():
-			self.set_field(field, field_data.pop('data_type'), field_data.pop('default'), field_data.pop('null'), field_data)
 
-	def set_field(self, field: str, data_type: str, default: any, null: bool, meta: dict=None):
+	def set_field(self, field: str, data_type: str, default: any, null: bool, meta: dict=None) -> FieldState:
 		self.fields[field] = FieldState(data_type, default, null, meta)
+		return self.fields[field]
 
 	def del_field(self, field: str):
 		del self.fields[field]
 
 	def asdict(self) -> dict:
-		fields = {}
-		data = {'fields': fields}
-		for field, f_state in self.fields.items():
-			fields[field] = f_state.asdict()
-		data.update(self._meta)
+		data = super().asdict()
+		data.update({
+			'fields': dict((f[0], f[1].asdict()) for f in self.fields.items())
+		})
 		return data
 
 class State:
@@ -64,11 +61,13 @@ class State:
 
 		if app:
 			for model in app.get_models():
-				fields = dict(map(lambda f: (f.name, f.deconstruct()), model.meta.fields))
-				self.set_model(model.meta.name, fields)
+				model_state = self.set_model(model.meta.name)
+				for field in model.meta.fields:
+					model_state.set_field(field.name, field.data_type, field.default, field.null, field.meta)
 
-	def set_model(self, model: str, fields: dict, meta: dict=None):
-		self.models[model] = ModelState(fields, meta)
+	def set_model(self, model: str, meta: dict=None) -> ModelState:
+		self.models[model] = ModelState(meta)
+		return self.models[model]
 
 	def del_model(self, model: str):
 		del self.models[model]

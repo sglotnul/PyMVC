@@ -27,7 +27,7 @@ class MigrationFileManager:
 			with open(file) as f:
 				file_inner = f.read()
 				if file_inner:
-					migrations.append(Migration(yaml.load(file_inner, Loader=yaml.Loader)))
+					migrations.append(Migration.from_entry(yaml.load(file_inner, Loader=yaml.Loader)))
 		return migrations
 
 	def commit(self, migration: Migration):

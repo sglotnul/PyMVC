@@ -1,17 +1,14 @@
 class Field:
-	sql_type = None
+	data_type = None
 	autoincrement = False
 
 	def __init__(self, *, default=None, null=False):
 		self.default = default
 		self.null = not default and null
-
-	def deconstruct(self) -> dict:
-		return {
-			"data_type": self.sql_type,
-			"default": self.default,
-			"null": self.null,
-		}
+	
+	@property
+	def meta(self) -> dict:
+		return {}
 
 	def __set__(self, instance, value):
 		instance.__dict__[self.name] = value

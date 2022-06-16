@@ -11,7 +11,9 @@ class CreateTableOperation(Operation):
 		schema.create_table(self._table, map(lambda f: schema.get_field(*f), self._fields.items()))
 
 	def apply_to_state(self, state: object):
-		state.set_model(self._table, self._fields, self._meta)
+		model = state.set_model(self._table, self._meta)
+		for field, data in self._fields.items():
+			model.set_field(field, data.pop('data_type'), data.pop('default'), data.pop('null'), data)
 
 	def deconstruct(self) -> dict:
 		data = super().deconstruct()
