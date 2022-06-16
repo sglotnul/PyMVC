@@ -1,3 +1,5 @@
+from ast import Sub
+from re import sub
 from typing import List
 from pafmvc.orm.migrations.operations.base import Operation
 from pafmvc.orm.db.schema import SchemaEngine, TableSchemaEngine
@@ -90,14 +92,18 @@ class AlterTableOperation(Operation):
 	def __init__(self, *args, fields=None, **kwargs):
 		super().__init__(*args, **kwargs)
 		self._fields = fields or {}
-		self._suboperations = {}
+		self._suboperations = {}	
 
-		for suboperation_type, suboperation_list in self._meta.items():
-			if SUBOPERATION_CLS.get(suboperation_type) is None:
-				continue
-			for suboperation_definition in suboperation_list:
-				field = suboperation_definition.pop("field")
-				self._add_suboperation(suboperation_type, field, **suboperation_definition)
+	@classmethod
+	def from_entry(cls, entry: dict) -> object:
+		table = entry.pop("table")
+		instance = cls(table, **entry)
+		for suboperation_type, suboperation_list in entry.items():
+			suboperation_cls = SUBOPERATION_CLS.get(suboperation_type, None)
+			if suboperation_cls is not None:
+				for suboperation_definition in suboperation_list:
+					instance._add_suboperation(suboperation_type, suboperation_cls(table, suboperation_definition.pop("field"), **suboperation_definition))
+		return instance
 
 	def _get_same_suboperations_list(self, suboperation_type: str) -> List[SubOperation]:
 		same_suboperations_list = self._suboperations.get(suboperation_type)
@@ -106,19 +112,22 @@ class AlterTableOperation(Operation):
 			self._suboperations[suboperation_type] = same_suboperations_list
 		return same_suboperations_list
 
-	def _add_suboperation(self, suboperation_type: str, field: str, **kwargs):
-		suboperation_cls = SUBOPERATION_CLS[suboperation_type]
+	def _add_suboperation(self, suboperation_type: str, suboperation: SubOperation) -> SubOperation:
 		same_suboperation_list = self._get_same_suboperations_list(suboperation_type)
-		same_suboperation_list.append(suboperation_cls(self._table, field, **kwargs))
+		same_suboperation_list.append(suboperation)
+		return suboperation
 
-	def add_create_field_suboperation(self, field: str, data: dict):
-		self._add_suboperation("CREATE_FIELD", field, **data)
+	def add_create_field_suboperation(self, field: str, data: dict) -> SubOperation:
+		cls = SUBOPERATION_CLS["CREATE_FIELD"]
+		return self._add_suboperation("CREATE_FIELD", cls(self._table, field, **data))
 
-	def add_delete_field_suboperation(self, field: str):
-		self._add_suboperation("DELETE_FIELD", field)
+	def add_delete_field_suboperation(self, field: str) -> SubOperation:
+		cls = SUBOPERATION_CLS["DELETE_FIELD"]
+		return self._add_suboperation("DELETE_FIELD", cls(self._table, field))
 
-	def add_change_field_suboperation(self, field: str, data: dict):
-		self._add_suboperation("CHANGE_FIELD", field, **data)
+	def add_change_field_suboperation(self, field: str, data: dict) -> SubOperation:
+		cls = SUBOPERATION_CLS["CHANGE_FIELD"]
+		return self._add_suboperation("CHANGE_FIELD", cls(self._table, field, **data))
 
 	def apply(self, schema: SchemaEngine):
 		schema = schema.alter_table(self._table, map(lambda f: schema.get_field(*f), self._fields.items()))
