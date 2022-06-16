@@ -3,7 +3,7 @@ from pafmvc.orm.migrations.operations.base import Operation
 from pafmvc.orm.db.schema import SchemaEngine, TableSchemaEngine
 
 class CreateTableOperation(Operation):
-	def __init__(self, *args, fields: dict, **kwargs):
+	def __init__(self, *args, fields: dict=None, **kwargs):
 		super().__init__(*args, **kwargs)
 		self._fields = fields if fields is not None else {}
 
