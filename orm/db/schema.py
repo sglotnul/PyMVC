@@ -1,3 +1,4 @@
+from re import search
 from typing import Iterable
 from dataclasses import dataclass
 from pafmvc.orm.db.operator import OperatorRegistry, Operator, operator_delegating_metod
@@ -84,11 +85,12 @@ class SchemaEngine(OperatorRegistry):
 		self._operators['alter_table'].set(table_schema_engine)
 		return table_schema_engine
 
-	def get_field(self, field: str, meta: dict) -> FieldSchema:
-		if meta.get('references', None):
-			return self.foreign_key_schema(field, meta['data_type'], meta['default'], meta['null'], meta['references'])
-		if meta.get('primary_key', None):
-			return self.primary_key_schema(field, meta['data_type'], meta['default'], meta['null'])
-		return self.field_schema(field, meta['data_type'], meta['default'], meta['null'])
+	def get_field(self, field: str, data_type: str, *data) -> FieldSchema:
+		references = search(r'FK\((.+?)\)', data_type)
+		if references:
+			return self.foreign_key_schema(field, data_type, *data, references)
+		if data_type == "PK":
+			return self.primary_key_schema(field, data_type, *data)
+		return self.field_schema(field, data_type, *data)
 
 

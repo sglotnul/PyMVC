@@ -19,7 +19,9 @@ class Operation(ABC):
 		raise NotImplementedError()
 
 	def deconstruct(self) -> dict:
-		return {"table": self._table}
+		data = {"table": self._table}
+		data.update(self._meta)
+		return data
 
 	def __bool__(self) -> bool:
 		return bool(self._table)

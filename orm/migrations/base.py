@@ -55,7 +55,7 @@ class MigrationEngine:
 
 	def _field_compare(self, get_operation, field: str, from_field: dict, to_field: dict):
 		if from_field != to_field:
-			get_operation().add_change_field_suboperation(field, to_field.asdict())
+			get_operation().add_change_field_suboperation(field, to_field.deconstruct())
 
 	def _deep_compare(self, migration: Migration, table: str, from_meta: dict, to_meta: dict) -> Migration:
 		from_fields = from_meta.fields
@@ -67,14 +67,14 @@ class MigrationEngine:
 		def get_alter_table_operation() -> AlterTableOperation:
 			nonlocal alter_operation, migration
 			if alter_operation is None:
-				alter_operation = migration.add_change_table_operation(table, from_meta.asdict())
+				alter_operation = migration.add_change_table_operation(table, from_meta.deconstruct())
 			return alter_operation
 
-		for field, state in to_fields.items():
+		for field, field_meta in to_fields.items():
 			try:
 				del old_fields_copy[field]
 			except KeyError:
-				get_alter_table_operation().add_create_field_suboperation(field, state.asdict())
+				get_alter_table_operation().add_create_field_suboperation(field, field_meta.deconstruct())
 			else:
 				self._field_compare(get_alter_table_operation, field, from_fields[field], to_fields[field])
 		for field in old_fields_copy.keys():
@@ -87,7 +87,7 @@ class MigrationEngine:
 			try:
 				del old_state_copy[table]
 			except KeyError:
-				migration.add_create_table_operation(table, meta.asdict())
+				migration.add_create_table_operation(table, meta.deconstruct())
 			else:
 				old_meta = from_state[table]
 				self._deep_compare(migration, table, old_meta, meta)
