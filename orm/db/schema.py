@@ -96,5 +96,3 @@ class SchemaEngine(OperatorRegistry):
 		if data_type == "PK":
 			return self.primary_key_schema(field, data_type, *data)
 		return self.field_schema(field, data_type, *data)
-
-

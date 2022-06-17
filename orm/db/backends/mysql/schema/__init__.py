@@ -59,4 +59,3 @@ class MySQLSchemaEngine(SchemaEngine):
 		self._operators['delete_table'] = DeleteTableOperator()
 		self._operators['create_table'] = CreateTableOperator()
 		self._operators['alter_table'] = ChangeTableOperator()
-

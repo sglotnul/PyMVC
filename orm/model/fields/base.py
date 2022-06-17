@@ -24,4 +24,3 @@ class ReadOnlyFieldMixin:
 		if instance.__dict__.get(self.name, None) is not None:
 			raise Exception(f"{self.name} field is read-only")
 		instance.__dict__[self.name] = value
-	

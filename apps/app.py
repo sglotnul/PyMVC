@@ -54,4 +54,3 @@ class App:
 			self._urlpatterns = urlpatterns
 		except ModuleNotFoundError:
 			pass
-

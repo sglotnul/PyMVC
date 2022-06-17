@@ -44,4 +44,3 @@ class Manager:
 		for col, val in cols.items():
 			updater.set(col, val)
 		self._executor(updater.to_str())
-

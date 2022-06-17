@@ -53,4 +53,3 @@ class SetOperator(InsertValuesOperator):
 	def to_str(self) -> str:
 		separator = ","
 		return self.CMD.format(separator.join(self.COLUMN.format(col, self._prepare_value(val)) for col, val in self._values.items()))
-
