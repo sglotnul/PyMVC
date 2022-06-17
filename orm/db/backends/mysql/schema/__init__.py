@@ -20,11 +20,13 @@ class MySQLFieldSchema(FieldSchema):
 
 @dataclass
 class MySQLForeignKeySchema(ForeignKeySchema, MySQLFieldSchema):
-	pass
+	def __post_init__(self):
+		self.data_type = "INT"
 
 @dataclass
 class MySQLPrimaryKeySchema(PrimaryKeySchema, MySQLFieldSchema):
-	pass
+	def __post_init__(self):
+		self.data_type = "INT"
 
 class MySQLTableSchemaEngine(TableSchemaEngine):
 	def __init__(self, *args, **kwargs):

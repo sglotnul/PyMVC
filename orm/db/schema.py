@@ -16,10 +16,14 @@ class FieldSchema:
 @dataclass
 class ForeignKeySchema(FieldSchema):
 	references: str
+
+	def __post_init__(self):
+		raise Exception("foreign key data type wasn't redefined")
 	
 @dataclass
 class PrimaryKeySchema(FieldSchema):
-	pass
+	def __post_init__(self):
+		raise Exception("primary key data type wasn't redefined")
 
 class TableSchemaEngine(OperatorRegistry):
 	def __init__(self, schema: OperatorRegistry, table: str, fields: Iterable[FieldSchema]):
@@ -73,8 +77,8 @@ class SchemaEngine(OperatorRegistry):
 		self._operators['alter_table'] = Operator()
 
 	@operator_delegating_metod
-	def create_table(self, table: str, fields: Iterable[FieldSchema]) -> str:
-		self._operators['create_table'].set(table, fields)
+	def create_table(self, table: str, fields: Iterable[FieldSchema], **kwargs) -> str:
+		self._operators['create_table'].set(table, fields, **kwargs)
 
 	@operator_delegating_metod
 	def delete_table(self, table: str) -> str:
@@ -88,7 +92,7 @@ class SchemaEngine(OperatorRegistry):
 	def get_field(self, field: str, data_type: str, *data) -> FieldSchema:
 		references = search(r'FK\((.+?)\)', data_type)
 		if references:
-			return self.foreign_key_schema(field, data_type, *data, references)
+			return self.foreign_key_schema(field, data_type, *data, references.group(1))
 		if data_type == "PK":
 			return self.primary_key_schema(field, data_type, *data)
 		return self.field_schema(field, data_type, *data)

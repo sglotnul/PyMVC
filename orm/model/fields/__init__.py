@@ -4,39 +4,30 @@ class TextField(Field):
 	data_type = "TEXT"
 
 class CharField(Field):
-	data_type = "VARCHAR(%(max_length)s)"
+	data_type = "VARCHAR({})"
 
 	def __init__(self, *, max_length=None, **kwargs):
 		super().__init__(**kwargs)
 		if not isinstance(max_length, int):
 			raise Exception("max_leght parameter is required")
-		self.data_type %= {'max_length': max_length}
+		self.data_type = self.data_type.format(max_length)
 
 class BooleanField(Field):
 	data_type = "BOOL"
 
 class IntegerField(Field):
-	data_type = "INTEGER"
+	data_type = "INT"
 
-class ForeignKey(IntegerField):
+class ForeignKey(Field):
+	data_type = "FK({})"
+
 	def __init__(self, model, **kwargs):
 		super().__init__(**kwargs)
 		if not isinstance(model, object):
 			raise Exception("argument must be an Model class instance")
 		self._model = model.meta.name
+		self.data_type = self.data_type.format(self._model)
 
-	@property
-	def meta(self) -> dict:
-		return {'references': self._model}
-
-	def deconstruct(self) -> dict:
-		meta = super().deconstruct()
-		meta['references'] = self._model
-		return meta
-
-class PrimaryKeyField(ReadOnlyFieldMixin, IntegerField):
+class PrimaryKeyField(ReadOnlyFieldMixin, Field):
+	data_type = "PK"
 	autoincrement = True
-
-	@property
-	def meta(self) -> dict:
-		return {'primary_key': True}

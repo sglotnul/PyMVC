@@ -5,7 +5,10 @@ from pafmvc.orm.db.schema import TableSchemaEngine, FieldSchema, ForeignKeySchem
 comma = ","
 
 class CreateTableOperator(Operator):
-	CMD = "CREATE TABLE {};"
+	CREATE = "CREATE {}"
+	TABLE = "TABLE {}"
+	TEMPORARY = "TEMPORARY {}"
+	IF_NOT_EXISTS = "IF NOT EXISTS {}"
 	TABLE_TMP = "{} ({})"
 	FOREIGN_KEY = "FOREIGN KEY ({field}) REFERENCES {references}({key})"
 	PRIMARY_KEY = "PRIMARY KEY ({})"
@@ -37,16 +40,26 @@ class CreateTableOperator(Operator):
 			return sql_view_fields
 		return sql_view_fields + comma + constraints
 
-	def _create_single_table_query(self, table: str, fields: Tuple[FieldSchema]) -> str:
-		table_sql_view = self.TABLE_TMP.format(table, self._prepare_definition(fields))
-		return self.CMD.format(table_sql_view)
+	def _create_single_table_query(self, table: str, data: dict) -> str:
+		table_sql_view = self.TABLE_TMP.format(table, self._prepare_definition(data['fields']))
+		cmd = self.CREATE
+		if data['temporary']:
+			cmd = cmd.format(self.TEMPORARY)
+		cmd = cmd.format(self.TABLE)
+		if data['if_not_exists']:
+			cmd = cmd.format(self.IF_NOT_EXISTS)
+		return cmd.format(table_sql_view)
 
-	def set(self, table: str, fields: Iterable[FieldSchema]):
-		self._tables[table] = tuple(fields)
+	def set(self, table: str, fields: Iterable[FieldSchema], *, temporary=False, if_not_exists=False):
+		self._tables[table] = {
+			'fields': tuple(fields),
+			'temporary': temporary,
+			'if_not_exists': if_not_exists,
+		}
 
 	def to_str(self) -> str:
 		separator = "\n"
-		return separator.join(self._create_single_table_query(table, fields) for table, fields in self._tables.items())
+		return separator.join(self._create_single_table_query(table, data) for table, data in self._tables.items())
 	
 	def __bool__(self) -> bool:
 		return bool(self._tables)
