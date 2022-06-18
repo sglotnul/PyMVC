@@ -1,6 +1,6 @@
-from typing import Iterable
+from typing import Iterable, Union
 from dataclasses import dataclass
-from pafmvc.orm.db.schema import FieldSchema, ForeignKeySchema, PrimaryKeySchema, SchemaEngine, TableSchemaEngine
+from pafmvc.orm.db.schema import *
 from .operators import *
 
 @dataclass
@@ -15,8 +15,7 @@ class MySQLFieldSchema(FieldSchema):
 		raw_field_sql = FIELD_TMP.format(self.name, self.data_type)
 		if self.default is not None:
 			return raw_field_sql + separator + DEFAULT_POSTFIX.format(self.default)
-		postfix = NOT_NULL_POSTFIX if not self.null else NULL_POSTFIX
-		return raw_field_sql + separator + postfix
+		return raw_field_sql + separator + (NOT_NULL_POSTFIX if not self.null else NULL_POSTFIX)
 
 @dataclass
 class MySQLForeignKeySchema(ForeignKeySchema, MySQLFieldSchema):
@@ -27,6 +26,13 @@ class MySQLForeignKeySchema(ForeignKeySchema, MySQLFieldSchema):
 class MySQLPrimaryKeySchema(PrimaryKeySchema, MySQLFieldSchema):
 	def __post_init__(self):
 		self.data_type = "INT"
+
+@dataclass
+class MySQLManyToManySchema(ManyToManySchema, MySQLFieldSchema):
+	references: str
+
+	def __post_init__(self):
+		self.data_type = "TEXT"
 
 class MySQLTableSchemaEngine(TableSchemaEngine):
 	def __init__(self, *args, **kwargs):
@@ -49,8 +55,10 @@ class MySQLSchemaEngine(SchemaEngine):
 	field_schema = MySQLFieldSchema
 	foreign_key_schema = MySQLForeignKeySchema
 	primary_key_schema = MySQLPrimaryKeySchema
+	many_to_many_schema = MySQLManyToManySchema
 		
-	def alter_table(self, table: str, fields: Iterable[FieldSchema]) -> MySQLTableSchemaEngine:
+	def alter_table(self, table: str, fields: Iterable[Union[FieldSchema, Iterable[any]]]) -> MySQLTableSchemaEngine:
+		fields = tuple(map(lambda f: f if isinstance(f, FieldSchema) else self.get_field(*f), fields))
 		table_schema_engine = MySQLTableSchemaEngine(self, table, fields)
 		self._operators['alter_table'].set(table_schema_engine)
 		return table_schema_engine

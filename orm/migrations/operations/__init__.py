@@ -8,7 +8,7 @@ class CreateTableOperation(Operation):
 		self._fields = fields
 
 	def apply(self, schema: SchemaEngine):
-		schema.create_table(self._table, map(lambda f: schema.get_field(*f), self._fields))
+		schema.create_table(self._table, self._fields)
 
 	def apply_to_state(self, state: object):
 		model = state.set_model(self._table)
@@ -48,7 +48,7 @@ class CreateFieldSubOperation(SubOperation):
 		self._data = data
 
 	def apply(self, schema: TableSchemaEngine):
-		schema.add(schema.get_field(self._field, *self._data))
+		schema.add(self._field, *self._data)
 
 	def apply_to_state(self, state: object):
 		state.set_field(self._field, *self._data)
@@ -67,7 +67,7 @@ class DeleteFieldSubOperation(SubOperation):
 
 class ChangeFieldSubOperation(CreateFieldSubOperation):
 	def apply(self, schema: TableSchemaEngine):
-		schema.alter(schema.get_field(self._field, *self._data))
+		schema.alter(self._field, *self._data)
 
 SUBOPERATION_CLS = {
 	"CREATE_FIELD": CreateFieldSubOperation,
@@ -117,7 +117,7 @@ class AlterTableOperation(Operation):
 		return self._add_suboperation("CHANGE_FIELD", cls(self._table, field, *data))
 
 	def apply(self, schema: SchemaEngine):
-		schema = schema.alter_table(self._table, map(lambda f: schema.get_field(*f), self._fields))
+		schema = schema.alter_table(self._table, self._fields)
 		for suboperations in self._suboperations.values():
 			for suboperation in suboperations:
 				suboperation.apply(schema)

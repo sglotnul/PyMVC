@@ -14,7 +14,7 @@ class Field:
 		instance.__dict__[self.name] = value
 
 	def __get__(self, instance, owner):
-		return instance.__dict__.get(self.name, self.default)
+		return instance.__dict__.get(self.name, None)
 
 	def __set_name__(self, owner, name):
 		self.name = name

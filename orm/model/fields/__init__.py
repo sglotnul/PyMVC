@@ -25,9 +25,12 @@ class ForeignKey(Field):
 		super().__init__(**kwargs)
 		if not isinstance(model, object):
 			raise Exception("argument must be an Model class instance")
-		self._model = model.meta.name
-		self.data_type = self.data_type.format(self._model)
+		self._related_model = model.meta.name
+		self.data_type = self.data_type.format(self._related_model)
 
 class PrimaryKeyField(ReadOnlyFieldMixin, Field):
 	data_type = "PK"
 	autoincrement = True
+
+class ManyToManyField(ReadOnlyFieldMixin, ForeignKey):
+	data_type = "M2M({})"

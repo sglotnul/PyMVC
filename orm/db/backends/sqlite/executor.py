@@ -26,6 +26,7 @@ class SQLiteExecutor(BaseExecutor):
 	def __call__(self, query: str, *, script=False) -> sqlite3.Cursor:
 		if not query:
 			return
+		print(query)
 		execute = self._executor.execute
 		if script:
 			query = self._prepare_query(query)
