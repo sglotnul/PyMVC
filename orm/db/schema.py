@@ -29,9 +29,6 @@ class PrimaryKeySchema(FieldSchema):
 class ManyToManySchema(FieldSchema):
 	references: str
 
-	def __post_init__(self):
-		raise Exception("many-to-many data type wasn't redefined")
-
 class TableSchemaEngine(OperatorRegistry):
 	def __init__(self, schema: OperatorRegistry, table: str, fields: Iterable[FieldSchema]):
 		self._schema = schema
@@ -104,11 +101,15 @@ class SchemaEngine(OperatorRegistry):
 
 	@operator_delegating_metod
 	def create_table(self, table: str, fields: Iterable[Union[FieldSchema, Iterable[any]]], **kwargs) -> str:
-		fields = tuple(map(lambda f: f if isinstance(f, FieldSchema) else self.get_field(*f), fields))
-		for f in fields:
-			if isinstance(f, ManyToManySchema):
-				self.alter_table(table, fields).add_m2m(f)
-		self._operators['create_table'].set(table, fields, **kwargs)
+		field_list = []
+		for field in fields:
+			if not isinstance(field, FieldSchema):
+				field = self.get_field(*field)
+			if isinstance(field, ManyToManySchema):
+				self.alter_table(table, fields).add_m2m(field)
+			else:
+				field_list.append(field)
+		self._operators['create_table'].set(table, field_list, **kwargs)
 
 	@operator_delegating_metod
 	def delete_table(self, table: str) -> str:

@@ -2,7 +2,6 @@ from abc import abstractmethod
 from pafmvc.orm.db.operator import Operator
 from pafmvc.orm.db.entries import DataEngine
 from pafmvc.orm.db.schema import FieldSchema
-from pafmvc.orm.db.backends.mysql.schema.operators import AddM2MOperator
 
 class SQliteDeleteTableOperation(Operator):
 	CMD = "DROP TABLE {};"
@@ -125,7 +124,3 @@ class SQliteRenameOperator(SQLiteAlterTableOperator):
 
 	def __bool__(self) -> bool:
 		return bool(self._name)
-
-class SQLiteAddM2MOperator(SQLiteAlterTableOperator, AddM2MOperator):
-	def mutate_disposer_state(self):
-		pass

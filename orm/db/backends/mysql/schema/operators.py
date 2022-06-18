@@ -1,6 +1,6 @@
 from typing import Iterable, Tuple
 from pafmvc.orm.db.operator import Operator
-from pafmvc.orm.db.schema import ManyToManySchema, SchemaEngine, TableSchemaEngine, FieldSchema, ForeignKeySchema, PrimaryKeySchema
+from pafmvc.orm.db.schema import TableSchemaEngine, FieldSchema, ForeignKeySchema, PrimaryKeySchema
 
 comma = ","
 
@@ -178,28 +178,3 @@ class AddForeignKeyOperator(Operator):
 	
 	def __bool__(self) -> bool:
 		return bool(self._foreign_keys)
-
-class AddM2MOperator(Operator):
-	def __init__(self, disposer: TableSchemaEngine):
-		self._cols = []
-		self._disposer = disposer
-
-	def set(self, field: ManyToManySchema):
-		self._cols.append(field)
-
-	def _create_single_m2m(self, schema: SchemaEngine, field: ManyToManySchema):
-		bounding_table_name = field.default
-		rpart = bounding_table_name.split("_")
-		table_col, rel_table_col = rpart[0] + "_id", rpart[1] + "_id"
-		dt = f"FK({rpart[1]})"
-		dt2 = "INT"
-		return schema.create_table(bounding_table_name, [(table_col, dt, None, False), (rel_table_col, dt2, None, False)]).to_str()
-
-	def to_str(self) -> str:
-		schema = self._disposer.get_schema()
-		for col in self._cols:
-			self._create_single_m2m(schema, col)
-		return schema.to_str()
-
-	def __bool__(self) -> bool:
-		return bool(self._cols)

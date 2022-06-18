@@ -31,9 +31,6 @@ class MySQLPrimaryKeySchema(PrimaryKeySchema, MySQLFieldSchema):
 class MySQLManyToManySchema(ManyToManySchema, MySQLFieldSchema):
 	references: str
 
-	def __post_init__(self):
-		self.data_type = "TEXT"
-
 class MySQLTableSchemaEngine(TableSchemaEngine):
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
