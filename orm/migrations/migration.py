@@ -38,17 +38,17 @@ class Migration:
 	def _execute(self, executor, query: str):
 		executor(query, script=True)
 
-	def add_create_table_operation(self, table: str, data: dict) -> Operation:
+	def add_create_table_operation(self, table: str, fields: dict, **data) -> Operation:
 		cls = OPERATION_CLS["CREATE_TABLE"]
-		return self._add_operation("CREATE_TABLE", cls(table, **data))
+		return self._add_operation("CREATE_TABLE", cls(table, fields, **data))
 
 	def add_delete_table_operation(self, table: str) -> Operation:
 		cls = OPERATION_CLS["DELETE_TABLE"]
 		return self._add_operation("DELETE_TABLE", cls(table))
 
-	def add_change_table_operation(self, table: str, data: dict) -> Operation:
+	def add_change_table_operation(self, table: str, fields: dict, **data) -> Operation:
 		cls = OPERATION_CLS["CHANGE_TABLE"]
-		return self._add_operation("CHANGE_TABLE", cls(table, **data))
+		return self._add_operation("CHANGE_TABLE", cls(table, fields, **data))
 
 	def deconstruct(self) -> dict:
 		deconstructed_migration = {}

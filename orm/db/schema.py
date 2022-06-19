@@ -1,5 +1,5 @@
 from re import search
-from typing import Iterable, Union
+from typing import Iterable
 from dataclasses import dataclass
 from pafmvc.orm.db.operator import OperatorRegistry, Operator, operator_delegating_metod
 
@@ -44,9 +44,7 @@ class TableSchemaEngine(OperatorRegistry):
 		self._operators['rename_to'] = Operator()
 
 	@operator_delegating_metod
-	def add(self, field: Union[str, FieldSchema], *data):
-		if not isinstance(field, FieldSchema):
-			field = self.get_field(field, *data)
+	def add(self, field: FieldSchema):
 		if isinstance(field, ForeignKeySchema):
 			self.add_foreign_key(field)
 		if isinstance(field, ManyToManySchema):
@@ -58,9 +56,7 @@ class TableSchemaEngine(OperatorRegistry):
 		self._operators['drop'].set(field)
 
 	@operator_delegating_metod
-	def alter(self, field: Union[str, FieldSchema], *data):
-		if not isinstance(field, FieldSchema):
-			field = self.get_field(field, *data)
+	def alter(self, field: FieldSchema):
 		if isinstance(field, ForeignKeySchema):
 			self.add_foreign_key(field)
 		if isinstance(field, ManyToManySchema):
@@ -72,18 +68,16 @@ class TableSchemaEngine(OperatorRegistry):
 		self._operators['rename_to'].set(to_name)
 
 	@operator_delegating_metod
-	def add_foreign_key(self, field: Union[str, ForeignKeySchema], *data):
-		if not isinstance(field, ForeignKeySchema):
-			field = self.get_field(field, *data)
+	def add_foreign_key(self, field: ForeignKeySchema):
 		self._operators['add_fk'].set(field)
 
 	@operator_delegating_metod
-	def add_m2m(self, field: Union[str, ManyToManySchema], *data):
-		if not isinstance(field, ManyToManySchema):
-			field = self.get_field(field, *data)
+	def add_m2m(self, field: ManyToManySchema):
 		bounding_table_name = self._table + "_" + field.references
 		table_col, rel_table_col = self._table + "_id", field.references + "_id"
-		self._schema.create_table(bounding_table_name, [(table_col, f"FK({self._table})", None, False), (rel_table_col, f"FK({field.references})", None, False)])
+		table_col = self.get_field(table_col, f"FK({self._table})", None, False)
+		rel_table_col = self.get_field(rel_table_col, f"FK({field.references})", None, False)
+		self._schema.create_table(bounding_table_name, [table_col, rel_table_col])
 	
 	def get_field(self, *args, **kwargs) -> FieldSchema:
 		return self._schema.get_field(*args, **kwargs)
@@ -100,13 +94,13 @@ class SchemaEngine(OperatorRegistry):
 		self._operators['alter_table'] = Operator()
 
 	@operator_delegating_metod
-	def create_table(self, table: str, fields: Iterable[Union[FieldSchema, Iterable[any]]], **kwargs) -> str:
+	def create_table(self, table: str, fields: Iterable[FieldSchema], **kwargs) -> str:
 		field_list = []
+		alter_schema = None
 		for field in fields:
-			if not isinstance(field, FieldSchema):
-				field = self.get_field(*field)
 			if isinstance(field, ManyToManySchema):
-				self.alter_table(table, fields).add_m2m(field)
+				alter_schema = alter_schema or self.alter_table(table, fields)
+				alter_schema.add_m2m(field)
 			else:
 				field_list.append(field)
 		self._operators['create_table'].set(table, field_list, **kwargs)
@@ -115,8 +109,7 @@ class SchemaEngine(OperatorRegistry):
 	def delete_table(self, table: str) -> str:
 		self._operators['delete_table'].set(table)
 
-	def alter_table(self, table: str, fields: Iterable[Union[FieldSchema, Iterable[any]]]) -> TableSchemaEngine:
-		fields = tuple(map(lambda f: f if isinstance(f, FieldSchema) else self.get_field(*f), fields))
+	def alter_table(self, table: str, fields: Iterable[FieldSchema]) -> TableSchemaEngine:
 		table_schema_engine = TableSchemaEngine(self, table, fields)
 		self._operators['alter_table'].set(table_schema_engine)
 		return table_schema_engine

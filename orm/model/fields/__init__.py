@@ -32,5 +32,9 @@ class PrimaryKeyField(ReadOnlyFieldMixin, Field):
 	data_type = "PK"
 	autoincrement = True
 
+	def __init__(self):
+		self.default = None
+		self.null = False
+
 class ManyToManyField(ReadOnlyFieldMixin, ForeignKey):
 	data_type = "M2M({})"

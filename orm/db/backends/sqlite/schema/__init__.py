@@ -1,4 +1,4 @@
-from typing import Iterable, Union
+from typing import Iterable
 from pafmvc.orm.db.backends.mysql.schema import MySQLFieldSchema, MySQLForeignKeySchema, MySQLPrimaryKeySchema, MySQLManyToManySchema
 from pafmvc.orm.db.backends.mysql.schema.operators import CreateTableOperator, ChangeTableOperator
 from pafmvc.orm.db.schema import *
@@ -16,9 +16,7 @@ class SQLiteTableSchemaEngine(TableSchemaEngine):
 		self._operators['rename_to'] = SQliteRenameOperator(self)
 	
 	@operator_delegating_metod
-	def alter(self, field: Union[str, FieldSchema], *data):
-		if not isinstance(field, FieldSchema):
-			field = self.get_field(field, *data)
+	def alter(self, field: FieldSchema):
 		self.drop(field.name)
 		self.add(field)
 
@@ -51,8 +49,7 @@ class SQLiteSchemaEngine(SchemaEngine):
 		self._operators['create_table'] = CreateTableOperator()
 		self._operators['alter_table'] = ChangeTableOperator()
 
-	def alter_table(self, table: str, fields: Iterable[Union[FieldSchema, Iterable[any]]]) -> SQLiteTableSchemaEngine:
-		fields = tuple(map(lambda f: f if isinstance(f, FieldSchema) else self.get_field(*f), fields))
+	def alter_table(self, table: str, fields: Iterable[FieldSchema]) -> SQLiteTableSchemaEngine:
 		table_schema_engine = SQLiteTableSchemaEngine(self, table, fields)
 		self._operators['alter_table'].set(table_schema_engine)
 		return table_schema_engine

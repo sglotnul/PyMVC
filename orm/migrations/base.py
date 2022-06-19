@@ -53,11 +53,11 @@ class MigrationEngine:
 	def _migrate_state(self) -> State:
 		return State(migrations=self.file_manager._get_previous_migrations())
 
-	def _field_compare(self, get_operation, field: str, from_field: dict, to_field: dict):
+	def _field_compare(self, get_operation, field: str, from_field: FieldState, to_field: FieldState):
 		if from_field != to_field:
-			get_operation().add_change_field_suboperation(field, to_field.deconstruct())
+			get_operation().add_change_field_suboperation(field, to_field)
 
-	def _deep_compare(self, migration: Migration, table: str, from_meta: dict, to_meta: dict) -> Migration:
+	def _deep_compare(self, migration: Migration, table: str, from_meta: ModelState, to_meta: ModelState) -> Migration:
 		from_fields = from_meta.fields
 		to_fields = to_meta.fields
 
@@ -67,14 +67,14 @@ class MigrationEngine:
 		def get_alter_table_operation() -> AlterTableOperation:
 			nonlocal alter_operation, migration
 			if alter_operation is None:
-				alter_operation = migration.add_change_table_operation(table, from_meta.deconstruct())
+				alter_operation = migration.add_change_table_operation(table, from_fields)
 			return alter_operation
 
 		for field, field_meta in to_fields.items():
 			try:
 				del old_fields_copy[field]
 			except KeyError:
-				get_alter_table_operation().add_create_field_suboperation(field, field_meta.deconstruct())
+				get_alter_table_operation().add_create_field_suboperation(field, field_meta)
 			else:
 				self._field_compare(get_alter_table_operation, field, from_fields[field], to_fields[field])
 		for field in old_fields_copy.keys():
@@ -87,7 +87,7 @@ class MigrationEngine:
 			try:
 				del old_state_copy[table]
 			except KeyError:
-				migration.add_create_table_operation(table, meta.deconstruct())
+				migration.add_create_table_operation(table, meta.fields)
 			else:
 				old_meta = from_state[table]
 				self._deep_compare(migration, table, old_meta, meta)
