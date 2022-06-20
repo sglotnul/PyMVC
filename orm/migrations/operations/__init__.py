@@ -1,20 +1,21 @@
-from typing import Iterable, Tuple, List
+from typing import List
 from pafmvc.orm.migrations.operations.base import Operation
 from pafmvc.orm.db.schema import SchemaEngine, TableSchemaEngine
 from ..state import FieldState, ModelState
 
-class CreateTableOperation(Operation):
-	def __init__(self, table: str, fields: dict, **kwargs):
-		super().__init__(table, **kwargs)
-		self._fields = fields
+class BaseOperation(Operation):
+	def __init__(self, table: str, fields: dict=None, **meta):
+		super().__init__(table, **meta)
+		self._fields = fields or {}
 
+class CreateTableOperation(BaseOperation):
 	@classmethod
 	def from_entry(cls, entry: dict) -> object:
 		fields = dict(map(lambda e: (e[0], FieldState(*e[1])), entry.pop("fields").items()))
 		return cls(entry.pop('table'), fields, **entry)
 
 	def apply(self, schema: SchemaEngine):
-		fields = map(lambda e: schema.get_field(e[0], *e[1].deconstruct()), self._fields.items())
+		fields = tuple(map(lambda e: schema.get_field(e[0], *e[1].deconstruct()), self._fields.items()))
 		schema.create_table(self._table, fields)
 
 	def apply_to_state(self, state: object):
@@ -28,9 +29,10 @@ class CreateTableOperation(Operation):
 		data['fields'] = dict(map(lambda e: (e[0], e[1].deconstruct()), self._fields.items()))
 		return data
 
-class DeleteTableOperation(Operation):
+class DeleteTableOperation(BaseOperation):
 	def apply(self, schema: SchemaEngine):
-		schema.delete_table(self._table)
+		fields =  tuple(map(lambda e: schema.get_field(e[0], *e[1].deconstruct()), self._fields.items()))
+		schema.delete_table(self._table, fields)
 
 	def apply_to_state(self, state: object):
 		state.del_model(self._table)
@@ -38,8 +40,9 @@ class DeleteTableOperation(Operation):
 FIELDS_DICT = "fields"
 
 class SubOperation(Operation):
-	def __init__(self, field: str, **kwargs):
+	def __init__(self, field: str, data: FieldState=None, **kwargs):
 		self._field = field
+		self._data = data
 		self._meta = kwargs
 
 	@classmethod
@@ -55,10 +58,6 @@ class SubOperation(Operation):
 		return bool(super().__bool__() and self._field)
 
 class CreateFieldSubOperation(SubOperation):
-	def __init__(self, field: str, data: FieldState, **kwargs):
-		super().__init__(field, **kwargs)
-		self._data = data
-
 	@classmethod
 	def from_entry(cls, entry: dict) -> object:
 		return cls(entry.pop("field"), FieldState(*entry.pop("data")), **entry)
@@ -77,7 +76,8 @@ class CreateFieldSubOperation(SubOperation):
 
 class DeleteFieldSubOperation(SubOperation):
 	def apply(self, schema: TableSchemaEngine):
-		schema.drop(self._field)
+		field = schema.get_field(self._field, *self._data.deconstruct())
+		schema.drop(field)
 
 	def apply_to_state(self, state: object):
 		state.del_field(self._field)
@@ -93,10 +93,9 @@ SUBOPERATION_CLS = {
 	"CHANGE_FIELD": ChangeFieldSubOperation,
 }
 
-class AlterTableOperation(Operation):	
-	def __init__(self, table: str, fields: dict=None, **kwargs):
-		super().__init__(table, **kwargs)
-		self._fields = fields or {}
+class AlterTableOperation(BaseOperation):	
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
 		self._suboperations = {}	
 
 	@classmethod
@@ -125,16 +124,16 @@ class AlterTableOperation(Operation):
 		cls = SUBOPERATION_CLS["CREATE_FIELD"]
 		return self._add_suboperation("CREATE_FIELD", cls(field, data, **kwargs))
 
-	def add_delete_field_suboperation(self, field: str) -> SubOperation:
+	def add_delete_field_suboperation(self, field: str, data: FieldState, **kwargs) -> SubOperation:
 		cls = SUBOPERATION_CLS["DELETE_FIELD"]
-		return self._add_suboperation("DELETE_FIELD", cls(field))
+		return self._add_suboperation("DELETE_FIELD", cls(field, data, **kwargs))
 
 	def add_change_field_suboperation(self, field: str, data: FieldState, **kwargs) -> SubOperation:
 		cls = SUBOPERATION_CLS["CHANGE_FIELD"]
 		return self._add_suboperation("CHANGE_FIELD", cls(field, data, **kwargs))
 
 	def apply(self, schema: SchemaEngine):
-		fields = map(lambda e: schema.get_field(e[0], *e[1].deconstruct()), self._fields.items())
+		fields =  tuple(map(lambda e: schema.get_field(e[0], *e[1].deconstruct()), self._fields.items()))
 		schema = schema.alter_table(self._table, fields)
 		for suboperations in self._suboperations.values():
 			for suboperation in suboperations:

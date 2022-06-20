@@ -1,13 +1,13 @@
-from typing import Iterable
+from typing import Tuple
 from pafmvc.orm.db.backends.mysql.schema import MySQLFieldSchema, MySQLForeignKeySchema, MySQLPrimaryKeySchema, MySQLManyToManySchema
 from pafmvc.orm.db.backends.mysql.schema.operators import CreateTableOperator, ChangeTableOperator
 from pafmvc.orm.db.schema import *
 from .operators import *
 
 class SQLiteTableSchemaEngine(TableSchemaEngine):
-	def __init__(self, schema: SchemaEngine, table: str, fields: Iterable[FieldSchema]):
+	def __init__(self, schema: SchemaEngine, table: str, fields: Tuple[FieldSchema]):
 		super().__init__(schema, table, fields)
-		self._state = dict((f.name, f) for f in fields)
+		self._state = dict((f.name, f) for f in self._fields)
 
 	def __operators__(self):
 		self._operators['drop'] = SQLiteDropOperator(self)
@@ -17,8 +17,12 @@ class SQLiteTableSchemaEngine(TableSchemaEngine):
 	
 	@operator_delegating_metod
 	def alter(self, field: FieldSchema):
-		self.drop(field.name)
+		self.drop(self._state[field.name])
 		self.add(field)
+
+	@property
+	def fields(self) -> Tuple[FieldSchema]:
+		return self._fields
 
 	def get_schema(self) -> SchemaEngine:
 		return self._schema.__class__()
@@ -49,7 +53,7 @@ class SQLiteSchemaEngine(SchemaEngine):
 		self._operators['create_table'] = CreateTableOperator()
 		self._operators['alter_table'] = ChangeTableOperator()
 
-	def alter_table(self, table: str, fields: Iterable[FieldSchema]) -> SQLiteTableSchemaEngine:
+	def alter_table(self, table: str, fields: Tuple[FieldSchema]) -> SQLiteTableSchemaEngine:
 		table_schema_engine = SQLiteTableSchemaEngine(self, table, fields)
 		self._operators['alter_table'].set(table_schema_engine)
 		return table_schema_engine

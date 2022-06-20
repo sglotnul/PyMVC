@@ -77,8 +77,8 @@ class MigrationEngine:
 				get_alter_table_operation().add_create_field_suboperation(field, field_meta)
 			else:
 				self._field_compare(get_alter_table_operation, field, from_fields[field], to_fields[field])
-		for field in old_fields_copy.keys():
-			get_alter_table_operation().add_delete_field_suboperation(field)
+		for field, field_meta in old_fields_copy.items():
+			get_alter_table_operation().add_delete_field_suboperation(field, field_meta)
 		return migration
 
 	def _base_compare(self, migration: Migration, from_state: dict, to_state: dict) -> Migration:
@@ -91,8 +91,8 @@ class MigrationEngine:
 			else:
 				old_meta = from_state[table]
 				self._deep_compare(migration, table, old_meta, meta)
-		for table in old_state_copy.keys():
-			migration.add_delete_table_operation(table)
+		for table, meta in old_state_copy.items():
+			migration.add_delete_table_operation(table, meta.fields)
 		return migration
 
 	def get_changes(self) -> Migration:

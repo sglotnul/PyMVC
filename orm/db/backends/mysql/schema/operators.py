@@ -1,4 +1,4 @@
-from typing import Iterable, Tuple
+from typing import Tuple
 from pafmvc.orm.db.operator import Operator
 from pafmvc.orm.db.schema import TableSchemaEngine, FieldSchema, ForeignKeySchema, PrimaryKeySchema
 
@@ -50,7 +50,7 @@ class CreateTableOperator(Operator):
 			cmd = cmd.format(self.IF_NOT_EXISTS)
 		return cmd.format(table_sql_view) + ";"
 
-	def set(self, table: str, fields: Iterable[FieldSchema], *, temporary=False, if_not_exists=False):
+	def set(self, table: str, fields: Tuple[FieldSchema], *, temporary=False, if_not_exists=False):
 		self._tables[table] = {
 			'fields': tuple(fields),
 			'temporary': temporary,

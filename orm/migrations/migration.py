@@ -42,13 +42,13 @@ class Migration:
 		cls = OPERATION_CLS["CREATE_TABLE"]
 		return self._add_operation("CREATE_TABLE", cls(table, fields, **data))
 
-	def add_delete_table_operation(self, table: str) -> Operation:
+	def add_delete_table_operation(self, table: str, fields: dict, **data) -> Operation:
 		cls = OPERATION_CLS["DELETE_TABLE"]
-		return self._add_operation("DELETE_TABLE", cls(table))
+		return self._add_operation("DELETE_TABLE", cls(table, fields))
 
 	def add_change_table_operation(self, table: str, fields: dict, **data) -> Operation:
 		cls = OPERATION_CLS["CHANGE_TABLE"]
-		return self._add_operation("CHANGE_TABLE", cls(table, fields, **data))
+		return self._add_operation("CHANGE_TABLE", cls(table, fields))
 
 	def deconstruct(self) -> dict:
 		deconstructed_migration = {}

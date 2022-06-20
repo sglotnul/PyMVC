@@ -84,7 +84,7 @@ class SQLiteDropOperator(SQLiteAlterTableOperator):
 		query = schema.create_table(backup_table_name, backup_fields.values()).to_str() + separator
 		schema = disposer.get_schema()
 		query += DataEngine().insert(backup_table_name).insert_from(table_name, tuple(backup_fields.keys())).to_str() + separator
-		query += schema.delete_table(table_name).to_str() + separator
+		query += schema.delete_table(table_name, disposer.fields).to_str() + separator
 		schema = disposer.get_schema()
 		query += schema.alter_table(backup_table_name, backup_fields.values()).rename_to(table_name).to_str()
 

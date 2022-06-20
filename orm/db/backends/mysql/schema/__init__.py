@@ -1,4 +1,4 @@
-from typing import Iterable
+from typing import Tuple
 from dataclasses import dataclass
 from pafmvc.orm.db.schema import *
 from .operators import *
@@ -54,7 +54,7 @@ class MySQLSchemaEngine(SchemaEngine):
 	primary_key_schema = MySQLPrimaryKeySchema
 	many_to_many_schema = MySQLManyToManySchema
 		
-	def alter_table(self, table: str, fields: Iterable[FieldSchema]) -> MySQLTableSchemaEngine:
+	def alter_table(self, table: str, fields: Tuple[FieldSchema]) -> MySQLTableSchemaEngine:
 		table_schema_engine = MySQLTableSchemaEngine(self, table, fields)
 		self._operators['alter_table'].set(table_schema_engine)
 		return table_schema_engine

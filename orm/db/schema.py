@@ -1,5 +1,5 @@
 from re import search
-from typing import Iterable
+from typing import Tuple
 from dataclasses import dataclass
 from pafmvc.orm.db.operator import OperatorRegistry, Operator, operator_delegating_metod
 
@@ -30,10 +30,10 @@ class ManyToManySchema(FieldSchema):
 	references: str
 
 class TableSchemaEngine(OperatorRegistry):
-	def __init__(self, schema: OperatorRegistry, table: str, fields: Iterable[FieldSchema]):
+	def __init__(self, schema: OperatorRegistry, table: str, fields: Tuple[FieldSchema]):
 		self._schema = schema
 		self._table = table
-		self._fields = fields
+		self._fields = tuple(fields)
 		super().__init__()
 
 	def __operators__(self):
@@ -52,8 +52,10 @@ class TableSchemaEngine(OperatorRegistry):
 		self._operators['add'].set(field)
 
 	@operator_delegating_metod
-	def drop(self, field: str):
-		self._operators['drop'].set(field)
+	def drop(self, field: FieldSchema):
+		if isinstance(field, ManyToManySchema):
+			return self.drop_m2m(field)
+		self._operators['drop'].set(field.name)
 
 	@operator_delegating_metod
 	def alter(self, field: FieldSchema):
@@ -61,6 +63,11 @@ class TableSchemaEngine(OperatorRegistry):
 			self.add_foreign_key(field)
 		if isinstance(field, ManyToManySchema):
 			return self.add_m2m(field)
+		else:
+			for f in self._fields:
+				if f.name == field.name:
+					if isinstance(f, ManyToManySchema):
+						return self.drop_m2m(f)
 		self._operators['alter'].set(field)
 
 	@operator_delegating_metod
@@ -71,13 +78,21 @@ class TableSchemaEngine(OperatorRegistry):
 	def add_foreign_key(self, field: ForeignKeySchema):
 		self._operators['add_fk'].set(field)
 
+	def _get_m2m_table_data(self, field: ManyToManySchema) -> Tuple[any]:
+		bounding_table_name = self._table + "_" + field.references
+		fields = (
+			self.get_field(self._table + "_id", f"FK({self._table})", None, False),
+			self.get_field(field.references + "_id", f"FK({field.references})", None, False),
+		)
+		return (bounding_table_name, fields)
+
 	@operator_delegating_metod
 	def add_m2m(self, field: ManyToManySchema):
-		bounding_table_name = self._table + "_" + field.references
-		table_col, rel_table_col = self._table + "_id", field.references + "_id"
-		table_col = self.get_field(table_col, f"FK({self._table})", None, False)
-		rel_table_col = self.get_field(rel_table_col, f"FK({field.references})", None, False)
-		self._schema.create_table(bounding_table_name, [table_col, rel_table_col])
+		self._schema.create_table(*self._get_m2m_table_data(field))
+
+	@operator_delegating_metod
+	def drop_m2m(self, field: ManyToManySchema):
+		self._schema.delete_table(*self._get_m2m_table_data(field))
 	
 	def get_field(self, *args, **kwargs) -> FieldSchema:
 		return self._schema.get_field(*args, **kwargs)
@@ -94,10 +109,10 @@ class SchemaEngine(OperatorRegistry):
 		self._operators['alter_table'] = Operator()
 
 	@operator_delegating_metod
-	def create_table(self, table: str, fields: Iterable[FieldSchema], **kwargs) -> str:
+	def create_table(self, table: str, fields: Tuple[FieldSchema], **kwargs) -> str:
 		field_list = []
 		alter_schema = None
-		for field in fields:
+		for field in fields:	
 			if isinstance(field, ManyToManySchema):
 				alter_schema = alter_schema or self.alter_table(table, fields)
 				alter_schema.add_m2m(field)
@@ -106,10 +121,15 @@ class SchemaEngine(OperatorRegistry):
 		self._operators['create_table'].set(table, field_list, **kwargs)
 
 	@operator_delegating_metod
-	def delete_table(self, table: str) -> str:
+	def delete_table(self, table: str, fields: Tuple[FieldSchema]) -> str:
+		for field in fields:
+			alter_schema = None
+			if isinstance(field, ManyToManySchema):
+				alter_schema = alter_schema or self.alter_table(table, fields)
+				alter_schema.drop_m2m(field)
 		self._operators['delete_table'].set(table)
 
-	def alter_table(self, table: str, fields: Iterable[FieldSchema]) -> TableSchemaEngine:
+	def alter_table(self, table: str, fields: Tuple[FieldSchema]) -> TableSchemaEngine:
 		table_schema_engine = TableSchemaEngine(self, table, fields)
 		self._operators['alter_table'].set(table_schema_engine)
 		return table_schema_engine
