@@ -8,8 +8,15 @@ class BaseExecutor(ABC):
 	query = Query
 	data_engine = DataEngine
 
+	def __init__(self, path: str):
+		self._path = path
+
 	@abstractmethod
-	def __init__(self, executor):
+	def connect(self):
+		raise NotImplementedError()
+
+	@abstractmethod
+	def close(self):
 		raise NotImplementedError()
 
 	@abstractmethod
@@ -17,15 +24,7 @@ class BaseExecutor(ABC):
 		raise NotImplementedError()
 	
 	@abstractmethod
-	def close(self):
-		raise NotImplementedError()
-	
-	@abstractmethod
 	def rollback(self):
-		raise NotImplementedError()
-
-	@abstractmethod
-	def get_lastrowid(self) -> int:
 		raise NotImplementedError()
 	
 	@abstractmethod

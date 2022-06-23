@@ -7,6 +7,10 @@ class Manager:
 
 		self._executor = connect()
 		self._data_engine = self._executor.data_engine()
+	
+	def _execute(self, query: str) -> iter:
+		self._executor.connect()
+		return self._executor(query)
 
 	def get_queryset(self):
 		return QuerySet(self._model, self._executor)
@@ -22,11 +26,13 @@ class Manager:
 		return model
 
 	def _create_entry(self, query: str) -> int:
-		cur = self._executor(query)
-		return cur.lastrowid
+		cur = self._execute(query)
+		last_id = cur.lastrowid
+		self._executor.close()
+		return last_id
 	
 	def create(self, **cols):
-		inserter = self._data_engine.insert(self._model.name)
+		inserter = self._data_engine.insert(self._model.meta.name)
 		for field in self._model.meta.fields:
 			if not field.autoincrement:
 				val = cols.get(field.name, None)
@@ -37,10 +43,12 @@ class Manager:
 		return self.get(id=lastrowid)
 
 	def remove(self, **params):
-		self._executor(self._data_engine.remove(self._model.meta.name).where(**params).to_str())
+		self._execute(self._data_engine.remove(self._model.meta.name).where(**params).to_str())
+		self._executor.close()
 
 	def update(self, cols: dict, **params):
 		updater = self._data_engine.update(self._model.meta.name).where(**params)
 		for col, val in cols.items():
 			updater.set(col, val)
-		self._executor(updater.to_str())
+		self._execute(updater.to_str())
+		self._executor.close()

@@ -35,9 +35,6 @@ class Migration:
 		same_operations_list.append(operation)
 		return operation
 
-	def _execute(self, executor, query: str):
-		executor(query, script=True)
-
 	def add_create_table_operation(self, table: str, fields: dict, **data) -> Operation:
 		cls = OPERATION_CLS["CREATE_TABLE"]
 		return self._add_operation("CREATE_TABLE", cls(table, fields, **data))
@@ -63,7 +60,9 @@ class Migration:
 		for operation_list in self._operations.values():
 			for operation in operation_list:
 				operation.apply(schema)
-		self._execute(executor, schema.to_str())
+		executor.connect()
+		executor(schema.to_str(), script=True)
+		executor.close()
 
 	def apply_to_state(self, state: object):
 		for operation_list in self._operations.values():

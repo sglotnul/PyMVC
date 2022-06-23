@@ -7,20 +7,19 @@ class QuerySet:
 		self._executor = executor
 		self._model = model_cls
 		self._query = self._executor.query(self._model.meta.name)
-
+	
 	def _zip_model(self, cols: iter, row: iter) -> object:
 		fields = dict(zip(cols, row))
 		return self._model(**fields)
-
-	def _get_data(self) -> iter:
-		return self._executor(self._query.to_str())
-
+		
 	def _fetch(self) -> List[object]:
 		model_list = []
-		data = self._get_data()
-		columns = tuple(map(lambda x: x[0], data.description))
-		for row in data:
+		self._executor.connect()
+		cur = self._executor(self._query.to_str())
+		columns = tuple(map(lambda x: x[0], cur.description))
+		for row in cur:
 			model_list.append(self._zip_model(columns, row))
+		self._executor.close()
 		return model_list
 
 	def all(self):

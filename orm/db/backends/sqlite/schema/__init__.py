@@ -4,6 +4,11 @@ from pafmvc.orm.db.backends.mysql.schema.operators import CreateTableOperator, C
 from pafmvc.orm.db.schema import *
 from .operators import *
 
+@dataclass
+class SQLitePrimaryKeySchema(PrimaryKeySchema, MySQLFieldSchema):
+	def __post_init__(self):
+		self.data_type = "INTEGER"
+
 class SQLiteTableSchemaEngine(TableSchemaEngine):
 	def __init__(self, schema: SchemaEngine, table: str, fields: Tuple[FieldSchema]):
 		super().__init__(schema, table, fields)
@@ -45,7 +50,7 @@ class SQLiteTableSchemaEngine(TableSchemaEngine):
 class SQLiteSchemaEngine(SchemaEngine):
 	field_schema = MySQLFieldSchema
 	foreign_key_schema = MySQLForeignKeySchema
-	primary_key_schema = MySQLPrimaryKeySchema
+	primary_key_schema = SQLitePrimaryKeySchema
 	many_to_many_schema = MySQLManyToManySchema
 
 	def __operators__(self):

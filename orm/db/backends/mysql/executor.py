@@ -4,20 +4,17 @@ from .schema import MySqlSchemaEngine
 class SQLiteExecutor(BaseExecutor):
 	schema_engine = MySqlSchemaEngine
 
-	def __init__(self, path: str):
-		self._executor = None
+	def connect(self):
+		pass
 
 	def commit(self) -> int:
-		self._executor.commit()
+		pass
 
 	def close(self):
-		self._executor.close()
+		pass
 
 	def rollback(self):
-		self._executor.rollback()
-
-	def get_lastrowid(self) -> int:
-		return self._executor.lastrowid
+		pass
 
 	def __call__(self, query: str, *, script=False):
 		pass
