@@ -1,4 +1,3 @@
-from ast import If
 import sqlite3
 from pafmvc.orm.db.executor import BaseExecutor
 from .schema import SQLiteSchemaEngine
