@@ -45,10 +45,10 @@ class TableSchemaEngine(OperatorRegistry):
 
 	@operator_delegating_metod
 	def add(self, field: FieldSchema):
-		if isinstance(field, ForeignKeySchema):
-			self.add_foreign_key(field)
 		if isinstance(field, ManyToManySchema):
 			return self.add_m2m(field)
+		if isinstance(field, ForeignKeySchema):
+			self.add_foreign_key(field)
 		self._operators['add'].set(field)
 
 	@operator_delegating_metod
@@ -59,15 +59,13 @@ class TableSchemaEngine(OperatorRegistry):
 
 	@operator_delegating_metod
 	def alter(self, field: FieldSchema):
-		if isinstance(field, ForeignKeySchema):
-			self.add_foreign_key(field)
 		if isinstance(field, ManyToManySchema):
 			return self.add_m2m(field)
-		else:
-			for f in self._fields:
-				if f.name == field.name:
-					if isinstance(f, ManyToManySchema):
-						return self.drop_m2m(f)
+		if isinstance(field, ForeignKeySchema):
+			self.add_foreign_key(field)
+		for f in self._fields:
+			if f.name == field.name and isinstance(f, ManyToManySchema):
+				return self.drop_m2m(f)
 		self._operators['alter'].set(field)
 
 	@operator_delegating_metod
@@ -92,7 +90,7 @@ class TableSchemaEngine(OperatorRegistry):
 
 	@operator_delegating_metod
 	def drop_m2m(self, field: ManyToManySchema):
-		self._schema.delete_table(*self._get_m2m_table_data(field))
+		self._schema.delete_table(self._table + "_" + field.references)
 	
 	def get_field(self, *args, **kwargs) -> FieldSchema:
 		return self._schema.get_field(*args, **kwargs)
@@ -121,7 +119,7 @@ class SchemaEngine(OperatorRegistry):
 		self._operators['create_table'].set(table, field_list, **kwargs)
 
 	@operator_delegating_metod
-	def delete_table(self, table: str, fields: Tuple[FieldSchema]) -> str:
+	def delete_table(self, table: str, fields: Tuple[FieldSchema]=()) -> str:
 		for field in fields:
 			alter_schema = None
 			if isinstance(field, ManyToManySchema):
